@@ -17,4 +17,18 @@
       <ProjectReference Include="../Stock.Analysis.0607/Stock.Analysis.0607.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Remove="Service\" />
+    <None Remove="MockData\" />
+    <None Remove="MockData\20100101-20210531.csv" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Service\" />
+    <Folder Include="MockData\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="MockData\20100101-20210531.csv">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
 </Project>
