@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Stock.Analysis._0607
+namespace Stock.Analysis._0607.Service
 {
     public class MovingAvarageService: IMovingAvarageService
     {
@@ -11,22 +11,22 @@ namespace Stock.Analysis._0607
 
         }
 
-        public List<double> CalculateMovingAvarage(List<StockModel> stockList, int avgDay)
+        public List<double?> CalculateMovingAvarage(List<StockModel> stockList, int avgDay)
         {
             Console.WriteLine($"Calculating {avgDay}-day moving avarage...");
             var avgList = new List<StockModel>();
             var sortedStock = stockList.OrderByDescending(s => s.Date).ToList();
-            double firstSum = 0;
+            double? firstSum = 0;
             for (var i = 0; i < avgDay; i++)
             {
                 firstSum += sortedStock[i].Price;
             }
 
             var index = 0;
-            double prePrice = 0;
+            double? prePrice = 0;
             sortedStock.ForEach(stock =>
             {
-                double sumPrice = 0;
+                double? sumPrice = 0;
                 var stopCaculate = (index + avgDay - 1) >= sortedStock.Count;
                 if (index == 0)
                 {
@@ -34,12 +34,14 @@ namespace Stock.Analysis._0607
                 }
                 else if (!stopCaculate)
                 {
-                    sumPrice = prePrice - sortedStock[index - 1].Price + sortedStock[index + avgDay - 1].Price;
+                    sumPrice = sortedStock[index - 1].Price != null && sortedStock[index + avgDay - 1].Price  != null ?
+                        prePrice - sortedStock[index - 1].Price + sortedStock[index + avgDay - 1].Price
+                        : prePrice;
                 }
 
                 avgList.Add(new StockModel{
                     Date = stock.Date,
-                    Price = Math.Round(sumPrice / avgDay, 4)
+                    Price = sumPrice == 0 ? null : (double)Math.Round(((decimal)sumPrice) / avgDay, 4)
                 });
                 prePrice = sumPrice;
                 index++;
@@ -50,6 +52,6 @@ namespace Stock.Analysis._0607
 
     public interface IMovingAvarageService
     {
-        List<double> CalculateMovingAvarage(List<StockModel> stockList, int avgDay);
+        List<double?> CalculateMovingAvarage(List<StockModel> stockList, int avgDay);
     }
 }

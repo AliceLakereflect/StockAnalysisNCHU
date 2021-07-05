@@ -5,7 +5,7 @@ using System.IO;
 using CsvHelper;
 using Newtonsoft.Json;
 
-namespace Stock.Analysis._0607
+namespace Stock.Analysis._0607.Service
 {
     public class FileHandler: IFileHandler
     {
@@ -23,7 +23,7 @@ namespace Stock.Analysis._0607
             File.WriteAllText(file.FullName, jsonOutput);
         }
 
-        public List<List<StockModel>> ReadData(string path)
+        public List<List<StockModel>> ReadDataFromFile(string path)
         {
             Console.WriteLine($"Getting data from {path}");
             var stockList1 = new List<StockModel>();
@@ -82,7 +82,7 @@ namespace Stock.Analysis._0607
 
     public interface IFileHandler
     {
-        List<List<StockModel>> ReadData(string path);
+        List<List<StockModel>> ReadDataFromFile(string path);
         void OutputResult(List<ChartData> chartDataList);
     }
 }

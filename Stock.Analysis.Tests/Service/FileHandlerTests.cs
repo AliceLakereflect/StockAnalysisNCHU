@@ -1,11 +1,11 @@
 ﻿using System;
 using Xunit;
-using Stock.Analysis._0607;
+using Stock.Analysis._0607.Service;
 using System.Collections.Generic;
 using System.IO;
 using Newtonsoft.Json;
 
-namespace Stock.Analysis.Tests
+namespace Stock.Analysis.Tests.Service
 {
     public class FileHandlerTests
     {
@@ -19,7 +19,7 @@ namespace Stock.Analysis.Tests
         public void ReadDataTest()
         {
             var path = Path.Combine(Environment.CurrentDirectory, @"MockData/20100101-20210531.csv");
-            var result = _fileHandler.ReadData(path);
+            var result = _fileHandler.ReadDataFromFile(path);
             Assert.NotNull(result);
             Assert.Equal(4, result.Count);
         }
@@ -28,7 +28,7 @@ namespace Stock.Analysis.Tests
         public void OutputResultTest()
         {
             var chartDataList = new List<ChartData> {
-                new ChartData{ Name = "0050.TW", Price = new List<double> { 130.01, 130.25 }}
+                new ChartData{ Name = "0050.TW", Price = new List<double?> { 130.01, 130.25 }}
             };
             _fileHandler.OutputResult(chartDataList);
 

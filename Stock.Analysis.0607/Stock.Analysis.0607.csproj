@@ -6,6 +6,10 @@
     <RootNamespace>Stock.Analysis._0607</RootNamespace>
   </PropertyGroup>
 
+  <PropertyGroup>
+   <LangVersion>preview</LangVersion>
+  </PropertyGroup>
+
   <ItemGroup>
     <None Remove="CsvHelper" />
     <None Remove="Data\" />

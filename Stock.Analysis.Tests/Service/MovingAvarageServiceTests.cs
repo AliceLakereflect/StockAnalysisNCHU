@@ -1,9 +1,9 @@
 ﻿using System;
 using Xunit;
-using Stock.Analysis._0607;
+using Stock.Analysis._0607.Service;
 using System.Collections.Generic;
 
-namespace Stock.Analysis.Tests
+namespace Stock.Analysis.Tests.Service
 {
     public class MovingAvarageServiceTests
     {
