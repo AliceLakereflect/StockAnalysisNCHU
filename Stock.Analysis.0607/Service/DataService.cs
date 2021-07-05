@@ -14,13 +14,7 @@ namespace Stock.Analysis._0607.Service
         {
         }
 
-        private static DateTime UnixTimeStampToDateTime(double unixTimeStamp)
-        {
-            // Unix timestamp is seconds past epoch
-            DateTime dtDateTime = new DateTime(1970, 1, 1, 0, 0, 0, 0, System.DateTimeKind.Utc);
-            dtDateTime = dtDateTime.AddSeconds(unixTimeStamp).ToLocalTime();
-            return dtDateTime;
-        }
+        
 
         public List<StockModel> Get1YDataFromYahooApi(string stockSymbol)
         {
@@ -37,7 +31,7 @@ namespace Stock.Analysis._0607.Service
                 {
                     result.Add(new StockModel
                     {
-                        Date = UnixTimeStampToDateTime(timestamp),
+                        Date = timestamp,
                         Price = closeStockValue.ElementAt(index)
                     });
                 }
@@ -63,7 +57,7 @@ namespace Stock.Analysis._0607.Service
                 {
                     result.Add(new StockModel
                     {
-                        Date = UnixTimeStampToDateTime(timestamp),
+                        Date = timestamp,
                         Price = closeStockValue.ElementAt(index)
                     });                    
                 }

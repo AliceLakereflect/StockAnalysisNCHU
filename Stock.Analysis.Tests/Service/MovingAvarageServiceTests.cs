@@ -2,6 +2,7 @@
 using Xunit;
 using Stock.Analysis._0607.Service;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Stock.Analysis.Tests.Service
 {
@@ -17,32 +18,32 @@ namespace Stock.Analysis.Tests.Service
         {
             DateTime.TryParse("2020-05-08", out var dateTime);
             var stockList = new List<StockModel> {
-                new StockModel{ Date = dateTime.AddDays(0), Price = 10 },
-                new StockModel{ Date = dateTime.AddDays(1), Price = 11 },
-                new StockModel{ Date = dateTime.AddDays(2), Price = 12 },
-                new StockModel{ Date = dateTime.AddDays(5), Price = 13 },
-                new StockModel{ Date = dateTime.AddDays(6), Price = 14 },
-                new StockModel{ Date = dateTime.AddDays(7), Price = 15 },
-                new StockModel{ Date = dateTime.AddDays(8), Price = 16 },
-                new StockModel{ Date = dateTime.AddDays(9), Price = 17 },
-                new StockModel{ Date = dateTime.AddDays(12), Price = 18 },
-                new StockModel{ Date = dateTime.AddDays(13), Price = 19 },
-                new StockModel{ Date = dateTime.AddDays(14), Price = 20 },
-                new StockModel{ Date = dateTime.AddDays(15), Price = 21 },
-                new StockModel{ Date = dateTime.AddDays(16), Price = 22 },
-                new StockModel{ Date = dateTime.AddDays(19), Price = 23 },
-                new StockModel{ Date = dateTime.AddDays(20), Price = 24 },
-                new StockModel{ Date = dateTime.AddDays(21), Price = 25 },
-                new StockModel{ Date = dateTime.AddDays(22), Price = 26 },
-                new StockModel{ Date = dateTime.AddDays(23), Price = 27 },
-                new StockModel{ Date = dateTime.AddDays(26), Price = 28 },
-                new StockModel{ Date = dateTime.AddDays(27), Price = 29 }
+                new StockModel{ Date = dateTime.AddDays(0).Ticks, Price = 10 },
+                new StockModel{ Date = dateTime.AddDays(1).Ticks, Price = 11 },
+                new StockModel{ Date = dateTime.AddDays(2).Ticks, Price = 12 },
+                new StockModel{ Date = dateTime.AddDays(5).Ticks, Price = 13 },
+                new StockModel{ Date = dateTime.AddDays(6).Ticks, Price = 14 },
+                new StockModel{ Date = dateTime.AddDays(7).Ticks, Price = 15 },
+                new StockModel{ Date = dateTime.AddDays(8).Ticks, Price = 16 },
+                new StockModel{ Date = dateTime.AddDays(9).Ticks, Price = 17 },
+                new StockModel{ Date = dateTime.AddDays(12).Ticks, Price = 18 },
+                new StockModel{ Date = dateTime.AddDays(13).Ticks, Price = 19 },
+                new StockModel{ Date = dateTime.AddDays(14).Ticks, Price = 20 },
+                new StockModel{ Date = dateTime.AddDays(15).Ticks, Price = 21 },
+                new StockModel{ Date = dateTime.AddDays(16).Ticks, Price = 22 },
+                new StockModel{ Date = dateTime.AddDays(19).Ticks, Price = 23 },
+                new StockModel{ Date = dateTime.AddDays(20).Ticks, Price = 24 },
+                new StockModel{ Date = dateTime.AddDays(21).Ticks, Price = 25 },
+                new StockModel{ Date = dateTime.AddDays(22).Ticks, Price = 26 },
+                new StockModel{ Date = dateTime.AddDays(23).Ticks, Price = 27 },
+                new StockModel{ Date = dateTime.AddDays(26).Ticks, Price = 28 },
+                new StockModel{ Date = dateTime.AddDays(27).Ticks, Price = 29 }
             };
-            var result = _movingAvgService.CalculateMovingAvarage(stockList, 5);
-            Assert.Equal(0, result[0]);
-            Assert.Equal(0, result[1]);
-            Assert.Equal(0, result[2]);
-            Assert.Equal(0, result[3]);
+            var result = _movingAvgService.CalculateMovingAvarage(stockList, 5).OrderBy(s => s.Date).Select(s => s.Price).ToList(); ;
+            Assert.Null(result[0]);
+            Assert.Null(result[1]);
+            Assert.Null(result[2]);
+            Assert.Null(result[3]);
             Assert.Equal(12, result[4]);
             Assert.Equal(13, result[5]);
             Assert.Equal(14, result[6]);
@@ -69,12 +70,12 @@ namespace Stock.Analysis.Tests.Service
             {
                 stockList.Add(new StockModel
                 {
-                    Date = dateTime.AddDays(i),
+                    Date = dateTime.AddDays(i).Ticks,
                     Price = i+10
                 });
             }
             
-            var result = _movingAvgService.CalculateMovingAvarage(stockList, 60);
+            var result = _movingAvgService.CalculateMovingAvarage(stockList, 60).OrderBy(s => s.Date).Select(s => s.Price).ToList();
             var index = 0;
             var limit = 59;
             var firstExpected = 39.5;
@@ -82,7 +83,7 @@ namespace Stock.Analysis.Tests.Service
             {
                 if(index < limit)
                 {
-                    Assert.Equal(0, result[index]);
+                    Assert.Null(result[index]);
                 }
                 else
                 {

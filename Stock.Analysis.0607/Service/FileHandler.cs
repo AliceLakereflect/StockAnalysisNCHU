@@ -43,28 +43,28 @@ namespace Stock.Analysis._0607.Service
                     double.TryParse(csv.GetField(1), out var stock1);
                     stockList1.Add(new StockModel
                     {
-                        Date = datetime,
+                        Date = datetime.Ticks,
                         Price = stock1
                     });
 
                     double.TryParse(csv.GetField(2), out var stock2);
                     stockList2.Add(new StockModel
                     {
-                        Date = datetime,
+                        Date = datetime.Ticks,
                         Price = stock2
                     });
 
                     double.TryParse(csv.GetField(3), out var stock3);
                     stockList3.Add(new StockModel
                     {
-                        Date = datetime,
+                        Date = datetime.Ticks,
                         Price = stock3
                     });
 
                     double.TryParse(csv.GetField(4), out var stock4);
                     stockList4.Add(new StockModel
                     {
-                        Date = datetime,
+                        Date = datetime.Ticks,
                         Price = stock4
                     });
                 }
@@ -76,6 +76,14 @@ namespace Stock.Analysis._0607.Service
             result.Add(stockList4);
 
             return result;
+        }
+
+        private static DateTime UnixTimeStampToDateTime(int unixTimeStamp)
+        {
+            // Unix timestamp is seconds past epoch
+            DateTime dtDateTime = new DateTime(1970, 1, 1, 0, 0, 0, 0, System.DateTimeKind.Utc);
+            dtDateTime = dtDateTime.AddSeconds(unixTimeStamp).ToLocalTime();
+            return dtDateTime;
         }
 
     }

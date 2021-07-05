@@ -11,7 +11,7 @@ namespace Stock.Analysis._0607.Service
 
         }
 
-        public List<double?> CalculateMovingAvarage(List<StockModel> stockList, int avgDay)
+        public List<StockModel> CalculateMovingAvarage(List<StockModel> stockList, int avgDay)
         {
             Console.WriteLine($"Calculating {avgDay}-day moving avarage...");
             var avgList = new List<StockModel>();
@@ -46,12 +46,18 @@ namespace Stock.Analysis._0607.Service
                 prePrice = sumPrice;
                 index++;
             });
-            return avgList.OrderBy(s => s.Date).Select(s => s.Price).ToList();
+            return avgList;
+        }
+
+        public decimal CalculateSingleMovingAvarage(List<StockModel> stocks, int avgDay)
+        {
+            return 0;
         }
     }
 
     public interface IMovingAvarageService
     {
-        List<double?> CalculateMovingAvarage(List<StockModel> stockList, int avgDay);
+        List<StockModel?> CalculateMovingAvarage(List<StockModel> stockList, int avgDay);
+        decimal CalculateSingleMovingAvarage(List<StockModel> stocks, int avgDay);
     }
 }
