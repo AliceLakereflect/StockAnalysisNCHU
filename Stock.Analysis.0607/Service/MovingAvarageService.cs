@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace Stock.Analysis._0607.Service
 {
-    public class MovingAvarageService: IMovingAvarageService
+    public class MovingAvarageService : IMovingAvarageService
     {
         public MovingAvarageService()
         {
@@ -13,10 +13,11 @@ namespace Stock.Analysis._0607.Service
 
         public List<StockModel> CalculateMovingAvarage(List<StockModel> stockList, int avgDay)
         {
-            Console.WriteLine($"Calculating {avgDay}-day moving avarage...");
+            //Console.WriteLine($"Calculating {avgDay}-day moving avarage...");
             var avgList = new List<StockModel>();
             var sortedStock = stockList.OrderByDescending(s => s.Date).ToList();
             double? firstSum = 0;
+            if (stockList.Count < avgDay) { return avgList; }
             for (var i = 0; i < avgDay; i++)
             {
                 firstSum += sortedStock[i].Price;
@@ -34,30 +35,24 @@ namespace Stock.Analysis._0607.Service
                 }
                 else if (!stopCaculate)
                 {
-                    sumPrice = sortedStock[index - 1].Price != null && sortedStock[index + avgDay - 1].Price  != null ?
+                    sumPrice = sortedStock[index - 1].Price != null && sortedStock[index + avgDay - 1].Price != null ?
                         prePrice - sortedStock[index - 1].Price + sortedStock[index + avgDay - 1].Price
                         : prePrice;
                 }
 
-                avgList.Add(new StockModel{
+                avgList.Add(new StockModel
+                {
                     Date = stock.Date,
-                    Price = sumPrice == 0 ? null : (double)Math.Round(((decimal)sumPrice) / avgDay, 4)
+                    Price = sumPrice == 0 ? null : (double)Math.Round(((decimal)sumPrice) / avgDay, 2, MidpointRounding.AwayFromZero)
                 });
                 prePrice = sumPrice;
                 index++;
             });
-            return avgList;
-        }
-
-        public decimal CalculateSingleMovingAvarage(List<StockModel> stocks, int avgDay)
-        {
-            return 0;
+            return avgList.OrderBy(s => s.Date).ToList();
         }
     }
-
     public interface IMovingAvarageService
     {
         List<StockModel?> CalculateMovingAvarage(List<StockModel> stockList, int avgDay);
-        decimal CalculateSingleMovingAvarage(List<StockModel> stocks, int avgDay);
     }
 }

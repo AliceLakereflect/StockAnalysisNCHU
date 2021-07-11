@@ -13,9 +13,9 @@ namespace Stock.Analysis._0607.Service
         {
         }
 
-        public void OutputResult(List<ChartData> chartDataList)
+        public void OutputResult<T>(List<T> chartDataList, string fileName)
         {
-            var path = Path.Combine(Environment.CurrentDirectory, @"Output/chartData.json");
+            var path = Path.Combine(Environment.CurrentDirectory, $"Output/{fileName}.json");
             var jsonOutput = JsonConvert.SerializeObject(chartDataList);
 
             FileInfo file = new FileInfo(path);
@@ -91,6 +91,6 @@ namespace Stock.Analysis._0607.Service
     public interface IFileHandler
     {
         List<List<StockModel>> ReadDataFromFile(string path);
-        void OutputResult(List<ChartData> chartDataList);
+        void OutputResult<T>(List<T> chartDataList, string fileName);
     }
 }

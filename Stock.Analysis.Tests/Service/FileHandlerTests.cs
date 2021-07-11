@@ -30,7 +30,7 @@ namespace Stock.Analysis.Tests.Service
             var chartDataList = new List<ChartData> {
                 new ChartData{ Name = "0050.TW", Price = new List<double?> { 130.01, 130.25 }}
             };
-            _fileHandler.OutputResult(chartDataList);
+            _fileHandler.OutputResult(chartDataList, "chartData");
 
             var path = Path.Combine(Environment.CurrentDirectory, @"Output/chartData.json");
             var file = File.ReadAllText(path);

@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using Newtonsoft.Json;
 using Stock.Analysis._0607.Models;
 using Stock.Analysis._0607.Service;
@@ -43,6 +44,17 @@ namespace Stock.Analysis.Tests.Service
             var result = _dataService.Get1YDataFromYahooApi(symbol);
             Assert.NotEmpty(result);
             Assert.Equal(252, result.Count);
+        }
+
+        [Fact]
+        public void GetPeriodDataFromYahooApiTest()
+        {
+            var symbol = "AAPL";
+            var period1 = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+            var period2 = new DateTime(2021, 6, 30, 0, 0, 0, DateTimeKind.Utc);
+            var result = _dataService.GetPeriodDataFromYahooApi(symbol, period1, period2);
+            Assert.NotEmpty(result);
+            Assert.Equal(376, result.Count);
         }
     }
 }
