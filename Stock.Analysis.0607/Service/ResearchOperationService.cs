@@ -90,13 +90,17 @@ namespace Stock.Analysis._0607.Service
                 : data.GetMaValue(LongTermMa);
 
             bool hasQty = false;
+            var missedBuying = false;
+            var first = true;
             data.Timestamp.ForEach(timestamp =>
             {
                 var shortMaVal = shortMaValList[index];
-                var LongMaVal = longMaValList[index];
-                if (shortMaVal != null && LongMaVal != null)
+                var longMaVal = longMaValList[index];
+                if (shortMaVal != null && longMaVal != null)
                 {
-                    if (shortMaVal > LongMaVal && hasQty == false)
+                    IfMissedBuying(ref missedBuying, ref first, shortMaVal, longMaVal);
+
+                    if (TimeToBuy(shortMaVal, longMaVal, hasQty, missedBuying))
                     {
                         myTransactions.Add(new StockTransaction
                         {
@@ -106,7 +110,7 @@ namespace Stock.Analysis._0607.Service
                         });
                         hasQty = !hasQty;
                     }
-                    else if (shortMaVal < LongMaVal && hasQty == true)
+                    else if (TimeToSell(shortMaVal, longMaVal, hasQty))
                     {
                         myTransactions.Add(new StockTransaction
                         {
@@ -124,6 +128,28 @@ namespace Stock.Analysis._0607.Service
             return myTransactions;
         }
 
+        private static void IfMissedBuying(ref bool missedBuying, ref bool first, double? shortMaVal, double? longMaVal)
+        {
+            if (first && shortMaVal >= longMaVal)
+            {
+                missedBuying = true;
+            }
+            first = false;
+            if (missedBuying && shortMaVal < longMaVal)
+            {
+                missedBuying = false;
+            }
+        }
+
+        private bool TimeToBuy(double? shortMaVal, double? longMaVal, bool hasQty, bool missedBuying)
+        {
+            return shortMaVal >= longMaVal && hasQty == false && !missedBuying;
+        }
+
+        private bool TimeToSell(double? shortMaVal, double? longMaVal, bool hasQty)
+        {
+            return shortMaVal <= longMaVal && hasQty == true;
+        }
     }
 
     public interface IResearchOperationService
