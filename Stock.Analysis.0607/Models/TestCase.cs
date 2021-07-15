@@ -1,5 +1,8 @@
-﻿class TestCase
+﻿namespace Stock.Analysis._0607.Models
 {
-    public int ShortTermMa { get; set; }
-    public int LongTermMa { get; set; }
+    public class TestCase
+    {
+        public int ShortTermMa { get; set; }
+        public int LongTermMa { get; set; }
+    }
 }

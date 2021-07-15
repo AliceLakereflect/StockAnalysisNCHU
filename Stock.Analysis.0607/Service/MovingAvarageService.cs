@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Stock.Analysis._0607.Models;
 
 namespace Stock.Analysis._0607.Service
 {

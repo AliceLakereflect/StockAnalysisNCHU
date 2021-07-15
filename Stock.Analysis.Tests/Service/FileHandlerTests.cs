@@ -4,6 +4,7 @@ using Stock.Analysis._0607.Service;
 using System.Collections.Generic;
 using System.IO;
 using Newtonsoft.Json;
+using Stock.Analysis._0607.Models;
 
 namespace Stock.Analysis.Tests.Service
 {

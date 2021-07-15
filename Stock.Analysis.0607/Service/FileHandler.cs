@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO;
 using CsvHelper;
 using Newtonsoft.Json;
+using Stock.Analysis._0607.Models;
 
 namespace Stock.Analysis._0607.Service
 {

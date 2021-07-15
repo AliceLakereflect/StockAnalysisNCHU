@@ -3,6 +3,7 @@ using Xunit;
 using Stock.Analysis._0607.Service;
 using System.Collections.Generic;
 using System.Linq;
+using Stock.Analysis._0607.Models;
 
 namespace Stock.Analysis.Tests.Service
 {
@@ -22,9 +23,53 @@ namespace Stock.Analysis.Tests.Service
         private List<double?> ma60FromYahoo = new List<double?> { 63.8, 65.02, 66.38, 67.7, 68.91, 70.2, 71.49, 72.74, 74.14, 75.75, 77.3,
             78.88, 80.52, 82.29, 84.14, 85.72, 87.55, 89.5, 91.71, 93.97, 96.49
         };
+        ChartData _historicalData;
+        List<StockModel> _stockList = new List<StockModel>();
 
         public MovingAvarageServiceTests()
         {
+            DateTime.TryParse("2020-05-08", out var _dateTime);
+            _historicalData = new ChartData
+            {
+                Name = "AAPL",
+                Price = new List<double?>()
+            };
+            _stockList = new List<StockModel>();
+            var dayIndex = 0;
+            for (var i = 90; i > 0; i--)
+            {
+                var elapsedSpan = new TimeSpan(_dateTime.AddDays(dayIndex).Ticks);
+                _stockList.Add(new StockModel
+                {
+                    Date = elapsedSpan.TotalSeconds,
+                    Price = i + 10
+                });
+                _historicalData.Price.Add(i + 10);
+                dayIndex++;
+            }
+            for (var i = 0; i < 90; i++)
+            {
+                var elapsedSpan = new TimeSpan(_dateTime.AddDays(dayIndex).Ticks);
+                _stockList.Add(new StockModel
+                {
+                    Date = elapsedSpan.TotalSeconds,
+                    Price = i + 10
+                });
+                _historicalData.Price.Add(i + 10);
+                dayIndex++;
+            }
+            for (var i = 90; i > 0; i--)
+            {
+                var elapsedSpan = new TimeSpan(_dateTime.AddDays(dayIndex).Ticks);
+                _stockList.Add(new StockModel
+                {
+                    Date = elapsedSpan.TotalSeconds,
+                    Price = i + 10
+                });
+                _historicalData.Price.Add(i + 10);
+                dayIndex++;
+            }
+            _historicalData.Timestamp = _stockList.Select(s => s.Date).ToList();
 
         }
         [Fact]
@@ -75,6 +120,50 @@ namespace Stock.Analysis.Tests.Service
             Assert.Equal(26, result[18]);
             Assert.Equal(27, result[19]);
         }
+
+        [Fact]
+        public void CalculateMovingAvarage5()
+        {
+            var result = _movingAvgService.CalculateMovingAvarage(_stockList, 5).Select(s => s.Price).ToList();
+            var index = 0;
+            var limit = 4;
+            var descExpected = 98;
+            var ascExpected = 12;
+            result.ForEach(stock =>
+            {
+                if (index < limit)
+                {
+                    Assert.Null(result[index]);
+                }
+                else if (index < 90)
+                {
+                    var expected = descExpected + limit - Convert.ToDouble(index);
+                    Assert.Equal(expected, result[index]);
+                }
+                else if (index == 91)
+                {
+                    Assert.Equal(11.4, result[index]);
+                }
+                else if (index == 92)
+                {
+                    Assert.Equal(11.2, result[index]);
+                }
+                else if (index == 93)
+                {
+                    Assert.Equal(11.4, result[index]);
+                }
+                else if (index > 94 && index < 180)
+                {
+                    var expected = ascExpected - 94 + Convert.ToDouble(index);
+                    Assert.Equal(expected, result[index]);
+                }
+                
+
+                index++;
+            });
+
+        }
+
         [Fact]
         public void CalculateMovingAvarage60()
         {
@@ -113,6 +202,7 @@ namespace Stock.Analysis.Tests.Service
         public void TestWithRealData()
         {
             const string symbol = "2603.TW";
+            // todo: change to static data
             var dataList = _dataService.GetPeriodDataFromYahooApi(symbol, new DateTime(2021,3,1,0,0,0), new DateTime(2021,7,1,0,0,0));
             var ma5 = _movingAvgService.CalculateMovingAvarage(dataList, 5).Select(s => s.Price).ToList().GetRange(61,21);
             var ma10 = _movingAvgService.CalculateMovingAvarage(dataList, 10).Select(s => s.Price).ToList().GetRange(61, 21);

@@ -1,8 +1,9 @@
-﻿using System;
-
-public class StockModel
+﻿namespace Stock.Analysis._0607.Models
 {
-    public long Date { get; set; }
-    public double? Price { get; set; }
+    public class StockModel
+    {
+        public double Date { get; set; }
+        public double? Price { get; set; }
+    }
 }
 
