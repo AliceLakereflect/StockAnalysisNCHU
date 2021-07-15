@@ -43,7 +43,7 @@ namespace Stock.Analysis.Tests.Service
         [Fact]
         public void GetMyTransactionsTest0()
         {
-            var transactionsList = _researchOperationService.GetMyTransactions(_historicalData, _stockList, 5, 20);
+            var transactionsList = _researchOperationService.GetMyTransactions(100, _historicalData, _stockList, 5, 20);
             Assert.Empty(transactionsList);
         }
 
@@ -93,12 +93,12 @@ namespace Stock.Analysis.Tests.Service
             historicalData.PriceAvg5Days = _movingAvarageService.CalculateMovingAvarage(stockList, 5).Select(s => s.Price).ToList();
             historicalData.PriceAvg20Days = _movingAvarageService.CalculateMovingAvarage(stockList, 20).Select(s => s.Price).ToList();
 
-            var transactionsList = _researchOperationService.GetMyTransactions(historicalData, stockList, 5, 20);
+            var transactionsList = _researchOperationService.GetMyTransactions(18, historicalData, stockList, 5, 20);
             Assert.Equal(2,transactionsList.Count);
             Assert.Equal(18, transactionsList.FirstOrDefault().TransPrice);
             Assert.Equal(1, transactionsList.FirstOrDefault().TransVolume);
             Assert.Equal(92, transactionsList.LastOrDefault().TransPrice);
-            Assert.Equal(-1, transactionsList.LastOrDefault().TransVolume);
+            Assert.Equal(1, transactionsList.LastOrDefault().TransVolume);
         }
 
         [Fact]
@@ -126,24 +126,55 @@ namespace Stock.Analysis.Tests.Service
                 index++;
             });
         }
+
         [Fact]
-        public void SettlementTest()
+        public void SettlementNoQtyTest()
         {
             var myTrans = new List<StockTransaction> {
                 new StockTransaction
                 {
                     TransPrice = 100,
+                    TransType = TransactionType.Buy,
                     TransVolume = 1
                 },
                 new StockTransaction
                 {
                     TransPrice = 120,
-                    TransVolume = -1
+                    TransType = TransactionType.Sell,
+                    TransVolume = 1
                 }
             };
             var testCase = new TestCase { ShortTermMa = 5, LongTermMa = 20};
-            var resultMsg = _researchOperationService.Settlement(myTrans, testCase);
+            var resultMsg = _researchOperationService.Settlement(140, myTrans, testCase);
             Assert.Contains("When ma = 5 vs 20,\tEarned: 20", resultMsg);
+        }
+
+        [Fact]
+        public void SettlementHasQtyTest()
+        {
+            var myTrans = new List<StockTransaction> {
+                new StockTransaction
+                {
+                    TransPrice = 100,
+                    TransType = TransactionType.Buy,
+                    TransVolume = 1
+                },
+                new StockTransaction
+                {
+                    TransPrice = 120,
+                    TransType = TransactionType.Sell,
+                    TransVolume = 1
+                },
+                new StockTransaction
+                {
+                    TransPrice = 140,
+                    TransType = TransactionType.Buy,
+                    TransVolume = 1
+                }
+            };
+            var testCase = new TestCase { Funds = 140, ShortTermMa = 5, LongTermMa = 20 };
+            var resultMsg = _researchOperationService.Settlement(160, myTrans, testCase);
+            Assert.Contains("When ma = 5 vs 20,\tEarned: 40", resultMsg);
         }
     }
 }

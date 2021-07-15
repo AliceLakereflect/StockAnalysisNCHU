@@ -61,20 +61,20 @@ namespace Stock.Analysis._0607.Service
             return chartDataList;
         }
 
-        public string Settlement(List<StockTransaction> myTrans, TestCase ma)
+        public string Settlement(double currentStock,List<StockTransaction> myTrans, TestCase ma)
         {
-            var hasQty = myTrans.Last().TransVolume == 1;
-            var buy = myTrans.Where(trans => trans.TransVolume == 1).Sum(trans => trans.TransPrice);
-            var sell = myTrans.Where(trans => trans.TransVolume == -1).Sum(trans => trans.TransPrice);
-            var earn = hasQty ? sell - buy + myTrans.Last().TransPrice * myTrans.Last().TransVolume : sell - buy;
-            var resultString = hasQty
-                                ? $"When ma = {ma.ShortTermMa} vs {ma.LongTermMa},\tEarned: {earn}\t(Include holdings: {myTrans.Last().TransPrice})"
-                                : $"When ma = {ma.ShortTermMa} vs {ma.LongTermMa},\tEarned: {earn}\t";
+            var hasQty = myTrans.Last().TransType == TransactionType.Buy;
+            var buy = myTrans.Where(trans => trans.TransType == TransactionType.Buy)
+                .Sum(trans => trans.TransPrice * trans.TransVolume);
+            var sell = myTrans.Where(trans => trans.TransType == TransactionType.Sell)
+                .Sum(trans => trans.TransPrice * trans.TransVolume);
+            var earn = hasQty ? sell - buy + currentStock : sell - buy;
+            var resultString = $"When ma = {ma.ShortTermMa} vs {ma.LongTermMa},\tEarned: {earn}\t";
             Console.WriteLine(resultString);
             return resultString;
         }
 
-        public List<StockTransaction> GetMyTransactions(ChartData data, List<StockModel> stockList, int shortTermMa, int LongTermMa)
+        public List<StockTransaction> GetMyTransactions(decimal funds, ChartData data, List<StockModel> stockList, int shortTermMa, int LongTermMa)
         {
             var myTransactions = new List<StockTransaction>();
             var symbol = data.Name;
@@ -102,11 +102,13 @@ namespace Stock.Analysis._0607.Service
 
                     if (TimeToBuy(shortMaVal, longMaVal, hasQty, missedBuying))
                     {
+                        var price = data.Price[index] ?? 0;
                         myTransactions.Add(new StockTransaction
                         {
                             TransTime = data.Timestamp[index],
-                            TransPrice = data.Price[index] ?? 0,
-                            TransVolume = 1
+                            TransPrice = price,
+                            TransType = TransactionType.Buy,
+                            TransVolume = CalculateBuyingVolumn(funds, price)
                         });
                         hasQty = !hasQty;
                     }
@@ -116,7 +118,8 @@ namespace Stock.Analysis._0607.Service
                         {
                             TransTime = data.Timestamp[index],
                             TransPrice = data.Price[index] ?? 0,
-                            TransVolume = -1
+                            TransType = TransactionType.Sell,
+                            TransVolume = CalculateSellingVolumn(myTransactions.LastOrDefault().TransVolume)
                         });
                         hasQty = !hasQty;
                     }
@@ -150,13 +153,27 @@ namespace Stock.Analysis._0607.Service
         {
             return shortMaVal <= longMaVal && hasQty == true;
         }
+
+        private int CalculateBuyingVolumn(decimal funds, double price)
+        {
+            if (price == 0)
+            {
+                return 0;
+            }
+            return (int)Math.Round(funds / ((decimal)price), 0, MidpointRounding.AwayFromZero);
+        }
+
+        private int CalculateSellingVolumn(decimal holdingVolumn)
+        {
+            return (int)holdingVolumn;
+        }
     }
 
     public interface IResearchOperationService
     {
         List<ChartData> GetMaFromCsv(string path);
         ChartData GetMaFromYahoo(string symbol, List<StockModel> stockList);
-        string Settlement(List<StockTransaction> myTrans, TestCase ma);
-        List<StockTransaction> GetMyTransactions(ChartData data, List<StockModel> stockList, int shortTermMa, int LongTermMa);
+        string Settlement(double currentStock, List<StockTransaction> myTrans, TestCase ma);
+        List<StockTransaction> GetMyTransactions(decimal funds, ChartData data, List<StockModel> stockList, int shortTermMa, int LongTermMa);
     }
 }
