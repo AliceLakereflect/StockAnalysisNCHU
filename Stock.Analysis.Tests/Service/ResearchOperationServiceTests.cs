@@ -93,12 +93,69 @@ namespace Stock.Analysis.Tests.Service
             historicalData.PriceAvg5Days = _movingAvarageService.CalculateMovingAvarage(stockList, 5).Select(s => s.Price).ToList();
             historicalData.PriceAvg20Days = _movingAvarageService.CalculateMovingAvarage(stockList, 20).Select(s => s.Price).ToList();
 
-            var transactionsList = _researchOperationService.GetMyTransactions(18, historicalData, stockList, 5, 20);
+            var transactionsList = _researchOperationService.GetMyTransactions(18000, historicalData, stockList, 5, 20);
             Assert.Equal(2,transactionsList.Count);
             Assert.Equal(18, transactionsList.FirstOrDefault().TransPrice);
-            Assert.Equal(1, transactionsList.FirstOrDefault().TransVolume);
+            Assert.Equal(1000, transactionsList.FirstOrDefault().TransVolume);
             Assert.Equal(92, transactionsList.LastOrDefault().TransPrice);
-            Assert.Equal(1, transactionsList.LastOrDefault().TransVolume);
+            Assert.Equal(1000, transactionsList.LastOrDefault().TransVolume);
+        }
+
+        [Theory]
+        [InlineData(18,0)]
+        [InlineData(18000,1000)]
+        [InlineData(37000,2000)]
+        [InlineData(60000,3000)]
+        public void GetMyTransactionsTestVolumn(decimal funds, int volumns)
+        {
+            var historicalData = new ChartData
+            {
+                Name = "AAPL",
+                Price = new List<double?>()
+            };
+            var stockList = new List<StockModel>();
+            var dayIndex = 0;
+            for (var i = 90; i > 0; i--)
+            {
+                var elapsedSpan = new TimeSpan(_dateTime.AddDays(dayIndex).Ticks);
+                stockList.Add(new StockModel
+                {
+                    Date = elapsedSpan.TotalSeconds,
+                    Price = i + 10
+                });
+                historicalData.Price.Add(i + 10);
+                dayIndex++;
+            }
+            for (var i = 0; i < 90; i++)
+            {
+                var elapsedSpan = new TimeSpan(_dateTime.AddDays(dayIndex).Ticks);
+                stockList.Add(new StockModel
+                {
+                    Date = elapsedSpan.TotalSeconds,
+                    Price = i + 10
+                });
+                historicalData.Price.Add(i + 10);
+                dayIndex++;
+            }
+            for (var i = 90; i > 0; i--)
+            {
+                var elapsedSpan = new TimeSpan(_dateTime.AddDays(dayIndex).Ticks);
+                stockList.Add(new StockModel
+                {
+                    Date = elapsedSpan.TotalSeconds,
+                    Price = i + 10
+                });
+                historicalData.Price.Add(i + 10);
+                dayIndex++;
+            }
+            historicalData.Timestamp = stockList.Select(s => s.Date).ToList();
+            historicalData.PriceAvg5Days = _movingAvarageService.CalculateMovingAvarage(stockList, 5).Select(s => s.Price).ToList();
+            historicalData.PriceAvg20Days = _movingAvarageService.CalculateMovingAvarage(stockList, 20).Select(s => s.Price).ToList();
+
+            var transactionsList = _researchOperationService.GetMyTransactions(funds, historicalData, stockList, 5, 20);
+            Assert.Equal(2, transactionsList.Count);
+            Assert.Equal(volumns, transactionsList.FirstOrDefault().TransVolume);
+            Assert.Equal(volumns, transactionsList.LastOrDefault().TransVolume);
         }
 
         [Fact]
@@ -149,32 +206,34 @@ namespace Stock.Analysis.Tests.Service
             Assert.Contains("When ma = 5 vs 20,\tEarned: 20", resultMsg);
         }
 
-        [Fact]
-        public void SettlementHasQtyTest()
+        [Theory]
+        [InlineData(1, 1, 160, "40")]
+        [InlineData(1, 2, 160, "60")]
+        public void SettlementHasQtyTest(int firstVolumn, int secondVolumn,double currentStock, string expectedEarned)
         {
             var myTrans = new List<StockTransaction> {
                 new StockTransaction
                 {
                     TransPrice = 100,
                     TransType = TransactionType.Buy,
-                    TransVolume = 1
+                    TransVolume = firstVolumn
                 },
                 new StockTransaction
                 {
                     TransPrice = 120,
                     TransType = TransactionType.Sell,
-                    TransVolume = 1
+                    TransVolume = firstVolumn
                 },
                 new StockTransaction
                 {
                     TransPrice = 140,
                     TransType = TransactionType.Buy,
-                    TransVolume = 1
+                    TransVolume = secondVolumn
                 }
             };
             var testCase = new TestCase { Funds = 140, ShortTermMa = 5, LongTermMa = 20 };
-            var resultMsg = _researchOperationService.Settlement(160, myTrans, testCase);
-            Assert.Contains("When ma = 5 vs 20,\tEarned: 40", resultMsg);
+            var resultMsg = _researchOperationService.Settlement(currentStock, myTrans, testCase);
+            Assert.Contains($"When ma = 5 vs 20,\tEarned: {expectedEarned}", resultMsg);
         }
     }
 }

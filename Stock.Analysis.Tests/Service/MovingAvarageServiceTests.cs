@@ -157,7 +157,23 @@ namespace Stock.Analysis.Tests.Service
                     var expected = ascExpected - 94 + Convert.ToDouble(index);
                     Assert.Equal(expected, result[index]);
                 }
-                
+                else if (index == 181)
+                {
+                    Assert.Equal(98.6, result[index]);
+                }
+                else if (index == 182)
+                {
+                    Assert.Equal(98.8, result[index]);
+                }
+                else if (index == 183)
+                {
+                    Assert.Equal(98.6, result[index]);
+                }
+                else if (index > 184)
+                {
+                    var expected = descExpected + 184 - Convert.ToDouble(index);
+                    Assert.Equal(expected, result[index]);
+                }
 
                 index++;
             });

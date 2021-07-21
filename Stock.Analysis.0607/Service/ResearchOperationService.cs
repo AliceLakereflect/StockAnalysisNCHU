@@ -8,6 +8,7 @@ namespace Stock.Analysis._0607.Service
     public class ResearchOperationService: IResearchOperationService
     {
         private IMovingAvarageService _movingAvgService = new MovingAvarageService();
+        private ITransTimingService _transTimingService = new TransTimingService();
         private IFileHandler _fileHandler = new FileHandler();
         public ResearchOperationService()
         {
@@ -68,7 +69,7 @@ namespace Stock.Analysis._0607.Service
                 .Sum(trans => trans.TransPrice * trans.TransVolume);
             var sell = myTrans.Where(trans => trans.TransType == TransactionType.Sell)
                 .Sum(trans => trans.TransPrice * trans.TransVolume);
-            var earn = hasQty ? sell - buy + currentStock : sell - buy;
+            var earn = hasQty ? sell - buy + currentStock*myTrans.Last().TransVolume : sell - buy;
             var resultString = $"When ma = {ma.ShortTermMa} vs {ma.LongTermMa},\tEarned: {earn}\t";
             Console.WriteLine(resultString);
             return resultString;
@@ -98,9 +99,9 @@ namespace Stock.Analysis._0607.Service
                 var longMaVal = longMaValList[index];
                 if (shortMaVal != null && longMaVal != null)
                 {
-                    IfMissedBuying(ref missedBuying, ref first, shortMaVal, longMaVal);
+                    _transTimingService.IfMissedBuying(ref missedBuying, ref first, shortMaVal, longMaVal);
 
-                    if (TimeToBuy(shortMaVal, longMaVal, hasQty, missedBuying))
+                    if (_transTimingService.TimeToBuy(shortMaVal, longMaVal, hasQty, missedBuying))
                     {
                         var price = data.Price[index] ?? 0;
                         myTransactions.Add(new StockTransaction
@@ -112,7 +113,7 @@ namespace Stock.Analysis._0607.Service
                         });
                         hasQty = !hasQty;
                     }
-                    else if (TimeToSell(shortMaVal, longMaVal, hasQty))
+                    else if (_transTimingService.TimeToSell(shortMaVal, longMaVal, hasQty))
                     {
                         myTransactions.Add(new StockTransaction
                         {
@@ -131,36 +132,14 @@ namespace Stock.Analysis._0607.Service
             return myTransactions;
         }
 
-        private static void IfMissedBuying(ref bool missedBuying, ref bool first, double? shortMaVal, double? longMaVal)
-        {
-            if (first && shortMaVal >= longMaVal)
-            {
-                missedBuying = true;
-            }
-            first = false;
-            if (missedBuying && shortMaVal < longMaVal)
-            {
-                missedBuying = false;
-            }
-        }
-
-        private bool TimeToBuy(double? shortMaVal, double? longMaVal, bool hasQty, bool missedBuying)
-        {
-            return shortMaVal >= longMaVal && hasQty == false && !missedBuying;
-        }
-
-        private bool TimeToSell(double? shortMaVal, double? longMaVal, bool hasQty)
-        {
-            return shortMaVal <= longMaVal && hasQty == true;
-        }
-
+        
         private int CalculateBuyingVolumn(decimal funds, double price)
         {
             if (price == 0)
             {
                 return 0;
             }
-            return (int)Math.Round(funds / ((decimal)price), 0, MidpointRounding.AwayFromZero);
+            return (int)Math.Round(funds / ((decimal)price*1000), 0, MidpointRounding.AwayFromZero)*1000;
         }
 
         private int CalculateSellingVolumn(decimal holdingVolumn)
