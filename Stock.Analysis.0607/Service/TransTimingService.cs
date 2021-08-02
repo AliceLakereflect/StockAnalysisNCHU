@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using Stock.Analysis._0607.Models;
 
 namespace Stock.Analysis._0607.Service
 {
@@ -22,11 +24,13 @@ namespace Stock.Analysis._0607.Service
             }
         }
 
+        // 黃金交叉
         public bool TimeToBuy(double? shortMaVal, double? longMaVal, bool hasQty, bool missedBuying)
         {
             return shortMaVal >= longMaVal && hasQty == false && !missedBuying;
         }
 
+        // 黃金交叉且均線向上
         public bool TimeToBuy(int index, List<double?> shortMaValList, List<double?> longMaValList, bool hasQty, bool missedBuying)
         {
             var shortMaVal = shortMaValList[index];
@@ -46,9 +50,40 @@ namespace Stock.Analysis._0607.Service
             return condition1 && condition2;
         }
 
+        // 死亡交叉
         public bool TimeToSell(double? shortMaVal, double? longMaVal, bool hasQty)
         {
             return shortMaVal <= longMaVal && hasQty == true;
+        }
+
+        // 移動停損
+        public bool TimeToSell(double lastTransTime, ref double maxPrice, double price, double currentTime, bool hasQty)
+        {
+            if (!hasQty)
+            {
+                return false;
+            }
+            if (currentTime > lastTransTime)
+            {
+                if (price > maxPrice)
+                {
+                    maxPrice = price;
+                }
+
+                var stopPrice = maxPrice * (1 - 0.1);
+                if (price <= stopPrice)
+                {
+                    return true;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+            else
+            {
+                return false;
+            }
         }
 
     }
@@ -59,5 +94,6 @@ namespace Stock.Analysis._0607.Service
         bool TimeToBuy(double? shortMaVal, double? longMaVal, bool hasQty, bool missedBuying);
         bool TimeToBuy(int index, List<double?> shortMaVal, List<double?> longMaVal, bool hasQty, bool missedBuying);
         bool TimeToSell(double? shortMaVal, double? longMaVal, bool hasQty);
+        bool TimeToSell(double lastTransTime, ref double maxPrice, double currentPrice, double currentTime, bool hasQty);
     }
 }

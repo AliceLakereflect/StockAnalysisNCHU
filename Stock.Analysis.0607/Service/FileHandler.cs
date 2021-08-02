@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using CsvHelper;
 using Newtonsoft.Json;
 using Stock.Analysis._0607.Models;
@@ -24,6 +25,65 @@ namespace Stock.Analysis._0607.Service
             File.WriteAllText(file.FullName, jsonOutput);
         }
 
+        public void OutputCsv(List<ChartData> chartDataList, string fileName)
+        {
+            var path = Path.Combine(Environment.CurrentDirectory, $"Output/{fileName}.csv");
+            using (var writer = new StreamWriter(path))
+            using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
+            {
+                foreach (var chartData in chartDataList)
+                {
+                    csv.WriteField("Stock Name");
+                    csv.NextRecord();
+                    csv.WriteField(chartData.Name);
+                    csv.NextRecord();
+
+                    var index = 0;
+                    csv.WriteField("Date");
+                    csv.WriteField("Price");
+                    csv.WriteField("5MA");
+                    csv.WriteField("10MA");
+                    csv.WriteField("20MA");
+                    csv.WriteField("60MA");
+                    csv.NextRecord();
+                    foreach (var data in chartData.Timestamp) {
+                        csv.WriteField(chartData.Day[index]);
+                        csv.WriteField(chartData.Price.ElementAt(index));
+                        csv.WriteField(chartData.PriceAvg5Days.ElementAt(index));
+                        csv.WriteField(chartData.PriceAvg10Days.ElementAt(index));
+                        csv.WriteField(chartData.PriceAvg20Days.ElementAt(index));
+                        csv.WriteField(chartData.PriceAvg60Days.ElementAt(index));
+                        csv.NextRecord();
+                        index++;
+                    }
+                    csv.NextRecord();
+                }
+            }
+        }
+
+        public void OutputTransaction(List<StockTransList> MyTransList, string fileName)
+        {
+            var path = Path.Combine(Environment.CurrentDirectory, $"Output/{fileName}.csv");
+            using (var writer = new StreamWriter(path))
+            using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
+            {
+                foreach (var myTrans in MyTransList)
+                {
+                    csv.WriteHeader<StockTransList>();
+                    csv.NextRecord();
+                    csv.WriteRecord(myTrans);
+                    csv.NextRecord();
+                    csv.WriteHeader<StockTransaction>();
+                    csv.NextRecord();
+                    foreach (var transaction in myTrans.Transactions)
+                    {
+                        csv.WriteRecord(transaction);
+                        csv.NextRecord();
+                    }
+                    csv.NextRecord();
+                }
+            }
+        }
         public List<List<StockModel>> ReadDataFromFile(string path)
         {
             Console.WriteLine($"Getting data from {path}");
@@ -93,5 +153,7 @@ namespace Stock.Analysis._0607.Service
     {
         List<List<StockModel>> ReadDataFromFile(string path);
         void OutputResult<T>(List<T> chartDataList, string fileName);
+        void OutputCsv(List<ChartData> chartDataList, string fileName);
+        void OutputTransaction(List<StockTransList> MyTransList, string fileName);
     }
 }

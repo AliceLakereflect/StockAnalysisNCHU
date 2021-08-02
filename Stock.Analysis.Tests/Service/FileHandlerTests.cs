@@ -40,6 +40,29 @@ namespace Stock.Analysis.Tests.Service
             Assert.NotEmpty(file);
             var content = JsonConvert.DeserializeObject<List<ChartData>>(file);
             Assert.Single(content);
+            
+        }
+
+        [Fact]
+        public void OutputCsvTest()
+        {
+            var chartDataList = new List<ChartData> {
+                new ChartData{ Name = "0050.TW",
+                    Day = new List<string> { "day1", "day2" },
+                    Price = new List<double?> { 130.01, 130.25 },
+                    PriceAvg5Days = new List<double?> { 130.01, 130.25 },
+                    PriceAvg10Days = new List<double?> { 130.01, 130.25 },
+                    PriceAvg20Days = new List<double?> { 130.01, 130.25 },
+                    PriceAvg60Days = new List<double?> { 130.01, 130.25 },
+                    Timestamp = new List<double>{ 1, 2 } }
+            };
+            _fileHandler.OutputCsv(chartDataList, "chartData");
+
+            var path = Path.Combine(Environment.CurrentDirectory, @"Output/chartData.csv");
+            var file = File.ReadAllText(path);
+            Assert.True(File.Exists(path));
+            Assert.NotNull(file);
+            Assert.NotEmpty(file);
         }
 
     }

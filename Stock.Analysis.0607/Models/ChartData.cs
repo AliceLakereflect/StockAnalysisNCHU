@@ -7,13 +7,13 @@ namespace Stock.Analysis._0607.Models
         public string Name { get; set; }
         public double Min { get; set; }
         public double Max { get; set; }
-        public List<string> Day { get; set; }
-        public List<double> Timestamp { get; set; }
-        public List<double?> Price { get; set; }
-        public List<double?> PriceAvg5Days { get; set; }
-        public List<double?> PriceAvg10Days { get; set; }
-        public List<double?> PriceAvg20Days { get; set; }
-        public List<double?> PriceAvg60Days { get; set; }
+        public List<string> Day { get; set; } = new List<string>();
+        public List<double> Timestamp { get; set; } = new List<double>();
+        public List<double?> Price { get; set; } = new List<double?>();
+        public List<double?> PriceAvg5Days { get; set; } = new List<double?>();
+        public List<double?> PriceAvg10Days { get; set; } = new List<double?>();
+        public List<double?> PriceAvg20Days { get; set; } = new List<double?>();
+        public List<double?> PriceAvg60Days { get; set; } = new List<double?>();
 
         public ChartData()
         {

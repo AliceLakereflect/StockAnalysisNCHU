@@ -27,8 +27,8 @@ namespace Stock.Analysis._0607
             };
             stockSymbol.ForEach(symbol =>
             {
-                var chartDataList = new List<ChartData>();
-                var stockList = _dataService.GetPeriodDataFromYahooApi(symbol, new DateTime(2020,1,1,0,0,0), new DateTime(2021, 7, 1, 0, 0, 0));
+                var periodEnd = new DateTime(2021, 6, 30, 0, 0, 0);
+                var stockList = _dataService.GetPeriodDataFromYahooApi(symbol, new DateTime(2020,1,1,0,0,0), periodEnd.AddDays(1));
                 ChartData data = _researchOperationService.GetMaFromYahoo(symbol, stockList);
                 var currentStock = stockList.Last().Price ?? 0;
                 Console.WriteLine($"{symbol}\t Current Stock: {currentStock}");
@@ -37,23 +37,22 @@ namespace Stock.Analysis._0607
                 {
                     var myTrans = _researchOperationService.GetMyTransactions(currentTestCase.Funds, data, stockList, currentTestCase.ShortTermMa, currentTestCase.LongTermMa);
                     myTransList.Add(new StockTransList { Name = symbol, TestCase = currentTestCase, Transactions = myTrans });
-                    string resultString = _researchOperationService.Settlement(currentStock, myTrans, currentTestCase);
+                    string resultString = _researchOperationService.Settlement(currentStock, myTrans, currentTestCase, Utils.ConvertToUnixTimestamp(periodEnd));
                     var transString = "=== My Transaction ======================================================================================\n";
                     transString += $"|\tName: {symbol}\t Test Case: {currentTestCase.ShortTermMa}MA vs {currentTestCase.LongTermMa}MA \t Current Stock:{stockList.Last().Price}\n";
                     myTrans.ForEach(t=>
                     {
-                        transString += $"|\tTransTime: {t.TransTime}\t TransVolume:{t.TransVolume}\t Fees:{t.Fees}\t Tax: {t.Tax}\t TransPrice: {t.TransPrice}\n";
+                        transString += $"|\t TransType: {t.TransType}\n|\t TransTime: {t.TransTimeString}\t TransVolume:{t.TransVolume}\t Fees:{t.Fees}\t " +
+                        $"Tax: {t.Tax}\t Balance: {t.Balance}\t TransPrice: {t.TransPrice}\n";
                     });
                     transString +=    "=========================================================================================================\n";
-                    //Console.WriteLine(transString);
+                    Console.WriteLine(transString);
                 });
             });
-
+            _fileHandler.OutputTransaction(myTransList, "AllTransaction");
+            _fileHandler.OutputCsv(chartDataList, "chartDataCsv");
             _fileHandler.OutputResult(chartDataList, "chartData");
             _fileHandler.OutputResult(myTransList, "myTransaction");
-            
         }
-
-        
     }
 }
