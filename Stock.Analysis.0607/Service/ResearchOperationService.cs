@@ -100,6 +100,7 @@ namespace Stock.Analysis._0607.Service
                 TransTime = 0,
                 TransTimeString = string.Empty,
                 TransPrice = 0,
+                TransVolume = 0,
                 TransType = TransactionType.AddFunds,
                 Balance = funds
             });
@@ -128,6 +129,7 @@ namespace Stock.Analysis._0607.Service
                 {
                     _transTimingService.IfMissedBuying(ref missedBuying, ref first, shortMaVal, longMaVal);
                     var price = data.Price[index] ?? 0;
+                    price = Math.Round(price, 2, MidpointRounding.AwayFromZero);
                     var lastTrans = myTransactions.Any() ? myTransactions.LastOrDefault() : new StockTransaction();
                     var lastTransTime = lastTrans.TransTime;
                     if (_transTimingService.TimeToBuy(shortMaVal, longMaVal, hasQty, missedBuying))
@@ -140,7 +142,7 @@ namespace Stock.Analysis._0607.Service
                             TransPrice = price,
                             TransType = TransactionType.Buy,
                             TransVolume = volume,
-                            Balance = lastTrans.Balance - (price * volume)
+                            Balance = lastTrans.Balance - Math.Round(price * volume)
                         });
                         hasQty = !hasQty;
                     }
@@ -154,7 +156,83 @@ namespace Stock.Analysis._0607.Service
                             TransPrice = price,
                             TransType = TransactionType.Sell,
                             TransVolume = volume,
-                            Balance = lastTrans.Balance + (price * volume)
+                            Balance = lastTrans.Balance + Math.Round(price * volume)
+                        });
+                        hasQty = !hasQty;
+                        maxPrice = 0;
+                    }
+                }
+
+                index++;
+            });
+
+            return myTransactions;
+        }
+        public List<StockTransaction> GetMyTransactionsOddShares(double funds, ChartData data, List<StockModel> stockList, int shortTermMa, int LongTermMa)
+        {
+            var myTransactions = new List<StockTransaction>();
+            myTransactions.Add(new StockTransaction
+            {
+                TransTime = 0,
+                TransTimeString = string.Empty,
+                TransPrice = 0,
+                TransVolume = 0,
+                TransType = TransactionType.AddFunds,
+                Balance = funds
+            });
+            var symbol = data.Name;
+            var index = 0;
+            List<double?> shortMaValList;
+            List<double?> longMaValList;
+            shortMaValList = !data.GetMaValue(shortTermMa).Any()
+                ? _movingAvgService.CalculateMovingAvarage(stockList, shortTermMa).Select(stock => stock.Price).ToList()
+                : data.GetMaValue(shortTermMa);
+
+            longMaValList = !data.GetMaValue(LongTermMa).Any()
+                ? _movingAvgService.CalculateMovingAvarage(stockList, LongTermMa).Select(stock => stock.Price).ToList()
+                : data.GetMaValue(LongTermMa);
+
+            bool hasQty = false;
+            var missedBuying = false;
+            var first = true;
+            double maxPrice = 0;
+            data.Timestamp.ForEach(timestamp =>
+            {
+                var shortMaVal = shortMaValList[index];
+                var longMaVal = longMaValList[index];
+                var timeString = Utils.UnixTimeStampToDateTime(timestamp);
+                if (shortMaVal != null && longMaVal != null)
+                {
+                    _transTimingService.IfMissedBuying(ref missedBuying, ref first, shortMaVal, longMaVal);
+                    var price = data.Price[index] ?? 0;
+                    price = Math.Round(price, 2, MidpointRounding.AwayFromZero);
+                    var lastTrans = myTransactions.Any() ? myTransactions.LastOrDefault() : new StockTransaction();
+                    var lastTransTime = lastTrans.TransTime;
+                    if (_transTimingService.TimeToBuy(shortMaVal, longMaVal, hasQty, missedBuying))
+                    {
+                        var volume = _calculateVolumeService.CalculateBuyingVolumeOddShares(lastTrans.Balance, price);
+                        myTransactions.Add(new StockTransaction
+                        {
+                            TransTime = timestamp,
+                            TransTimeString = $"{timeString.Year}-{timeString.Month}-{timeString.Day}",
+                            TransPrice = price,
+                            TransType = TransactionType.Buy,
+                            TransVolume = volume,
+                            Balance = lastTrans.Balance - Math.Round(price * volume, MidpointRounding.ToZero)
+                        });
+                        hasQty = !hasQty;
+                    }
+                    else if (_transTimingService.TimeToSell(shortMaVal, longMaVal, hasQty))
+                    {
+                        var volume = _calculateVolumeService.CalculateSellingVolume(myTransactions.LastOrDefault().TransVolume);
+                        myTransactions.Add(new StockTransaction
+                        {
+                            TransTime = timestamp,
+                            TransTimeString = $"{timeString.Year}-{timeString.Month}-{timeString.Day}",
+                            TransPrice = price,
+                            TransType = TransactionType.Sell,
+                            TransVolume = volume,
+                            Balance = lastTrans.Balance + Math.Round(price * volume, MidpointRounding.ToZero)
                         });
                         hasQty = !hasQty;
                         maxPrice = 0;
@@ -174,5 +252,6 @@ namespace Stock.Analysis._0607.Service
         ChartData GetMaFromYahoo(string symbol, List<StockModel> stockList);
         string Settlement(double currentStock, List<StockTransaction> myTrans, TestCase ma, double periodEnd);
         List<StockTransaction> GetMyTransactions(double funds, ChartData data, List<StockModel> stockList, int shortTermMa, int LongTermMa);
+        List<StockTransaction> GetMyTransactionsOddShares(double funds, ChartData data, List<StockModel> stockList, int shortTermMa, int LongTermMa);
     }
 }

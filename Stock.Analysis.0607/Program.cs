@@ -35,7 +35,7 @@ namespace Stock.Analysis._0607
                 chartDataList.Add(data);
                 testCase.ForEach(currentTestCase =>
                 {
-                    var myTrans = _researchOperationService.GetMyTransactions(currentTestCase.Funds, data, stockList, currentTestCase.ShortTermMa, currentTestCase.LongTermMa);
+                    var myTrans = _researchOperationService.GetMyTransactionsOddShares(currentTestCase.Funds, data, stockList, currentTestCase.ShortTermMa, currentTestCase.LongTermMa);
                     myTransList.Add(new StockTransList { Name = symbol, TestCase = currentTestCase, Transactions = myTrans });
                     string resultString = _researchOperationService.Settlement(currentStock, myTrans, currentTestCase, Utils.ConvertToUnixTimestamp(periodEnd));
                     var transString = "=== My Transaction ======================================================================================\n";

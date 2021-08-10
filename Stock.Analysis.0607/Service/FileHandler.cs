@@ -25,6 +25,31 @@ namespace Stock.Analysis._0607.Service
             File.WriteAllText(file.FullName, jsonOutput);
         }
 
+        public void OutputCsv(List<StockModel> dataList, string fileName)
+        {
+            var _movingAvgService = new MovingAvarageService();
+            var ma20 = _movingAvgService.CalculateMovingAvarage(dataList, 20).Select(s => s.Price).ToList();
+            var path = Path.Combine(Environment.CurrentDirectory, $"Output/{fileName}.csv");
+            using (var writer = new StreamWriter(path))
+            using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
+            {
+                csv.WriteField("Date");
+                csv.WriteField("Price");
+                csv.WriteField("20MA");
+                csv.NextRecord();
+                var index = 0;
+                foreach (var data in dataList)
+                {
+                    var time = Utils.UnixTimeStampToDateTime(data.Date);
+                    csv.WriteField($"{time.Year}-{time.Month}-{time.Day}");
+                    csv.WriteField(data.Price);
+                    csv.WriteField(ma20.ElementAt(index));
+                    csv.NextRecord();
+                    index++;
+                }
+            }
+        }
+
         public void OutputCsv(List<ChartData> chartDataList, string fileName)
         {
             var path = Path.Combine(Environment.CurrentDirectory, $"Output/{fileName}.csv");
@@ -138,15 +163,6 @@ namespace Stock.Analysis._0607.Service
 
             return result;
         }
-
-        private static DateTime UnixTimeStampToDateTime(int unixTimeStamp)
-        {
-            // Unix timestamp is seconds past epoch
-            DateTime dtDateTime = new DateTime(1970, 1, 1, 0, 0, 0, 0, System.DateTimeKind.Utc);
-            dtDateTime = dtDateTime.AddSeconds(unixTimeStamp).ToLocalTime();
-            return dtDateTime;
-        }
-
     }
 
     public interface IFileHandler
