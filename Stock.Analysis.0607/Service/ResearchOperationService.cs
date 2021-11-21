@@ -72,23 +72,23 @@ namespace Stock.Analysis._0607.Service
             if (hasQty)
             {
                 var timeString = Utils.UnixTimeStampToDateTime(periodEnd);
+                var price = Math.Round(currentStock, 2, MidpointRounding.AwayFromZero);
                 myTrans.Add(new StockTransaction
                 {
                     TransTime = periodEnd,
                     TransTimeString = $"{timeString.Year}-{timeString.Month}-{timeString.Day}",
-                    TransPrice = currentStock,
+                    TransPrice = price,
                     TransType = TransactionType.Sell,
                     TransVolume = myTrans.Last().TransVolume,
-                    Balance = myTrans.Last().Balance + currentStock * myTrans.Last().TransVolume
+                    Balance = myTrans.Last().Balance + Math.Round(currentStock * myTrans.Last().TransVolume)
                 });
             }
             var buy = myTrans.Where(trans => trans.TransType == TransactionType.Buy)
-                .Sum(trans => trans.TransPrice * trans.TransVolume);
+                .Sum(trans => Math.Round(trans.TransPrice * trans.TransVolume));
             var sell = myTrans.Where(trans => trans.TransType == TransactionType.Sell)
-                .Sum(trans => trans.TransPrice * trans.TransVolume);
+                .Sum(trans => Math.Round(trans.TransPrice * trans.TransVolume));
             var earn = sell - buy;
             var resultString = $"When ma = {ma.ShortTermMa} vs {ma.LongTermMa},\tEarned: {earn}\t";
-            Console.WriteLine(resultString);
             return resultString;
         }
 
@@ -117,8 +117,7 @@ namespace Stock.Analysis._0607.Service
                 : data.GetMaValue(LongTermMa);
 
             bool hasQty = false;
-            var missedBuying = false;
-            var first = true;
+            var check = false;
             double maxPrice = 0;
             data.Timestamp.ForEach(timestamp =>
             {
@@ -127,12 +126,11 @@ namespace Stock.Analysis._0607.Service
                 var timeString = Utils.UnixTimeStampToDateTime(timestamp);
                 if (shortMaVal != null && longMaVal != null)
                 {
-                    _transTimingService.IfMissedBuying(ref missedBuying, ref first, shortMaVal, longMaVal);
                     var price = data.Price[index] ?? 0;
                     price = Math.Round(price, 2, MidpointRounding.AwayFromZero);
                     var lastTrans = myTransactions.Any() ? myTransactions.LastOrDefault() : new StockTransaction();
                     var lastTransTime = lastTrans.TransTime;
-                    if (_transTimingService.TimeToBuy(shortMaVal, longMaVal, hasQty, missedBuying))
+                    if (_transTimingService.TimeToBuy(shortMaVal, longMaVal, hasQty, check))
                     {
                         var volume = _calculateVolumeService.CalculateBuyingVolume(lastTrans.Balance, price);
                         myTransactions.Add(new StockTransaction
@@ -161,6 +159,7 @@ namespace Stock.Analysis._0607.Service
                         hasQty = !hasQty;
                         maxPrice = 0;
                     }
+                    check = _transTimingService.TrueCheckGoldCross(check, shortMaVal, longMaVal);
                 }
 
                 index++;
@@ -193,8 +192,7 @@ namespace Stock.Analysis._0607.Service
                 : data.GetMaValue(LongTermMa);
 
             bool hasQty = false;
-            var missedBuying = false;
-            var first = true;
+            var check = false;
             double maxPrice = 0;
             data.Timestamp.ForEach(timestamp =>
             {
@@ -203,12 +201,10 @@ namespace Stock.Analysis._0607.Service
                 var timeString = Utils.UnixTimeStampToDateTime(timestamp);
                 if (shortMaVal != null && longMaVal != null)
                 {
-                    _transTimingService.IfMissedBuying(ref missedBuying, ref first, shortMaVal, longMaVal);
                     var price = data.Price[index] ?? 0;
                     price = Math.Round(price, 2, MidpointRounding.AwayFromZero);
                     var lastTrans = myTransactions.Any() ? myTransactions.LastOrDefault() : new StockTransaction();
-                    var lastTransTime = lastTrans.TransTime;
-                    if (_transTimingService.TimeToBuy(shortMaVal, longMaVal, hasQty, missedBuying))
+                    if (_transTimingService.TimeToBuy(shortMaVal, longMaVal, hasQty, check))
                     {
                         var volume = _calculateVolumeService.CalculateBuyingVolumeOddShares(lastTrans.Balance, price);
                         myTransactions.Add(new StockTransaction
@@ -222,7 +218,8 @@ namespace Stock.Analysis._0607.Service
                         });
                         hasQty = !hasQty;
                     }
-                    else if (_transTimingService.TimeToSell(shortMaVal, longMaVal, hasQty))
+                    // todo: 停損比例改為參數，從testcase丟進來
+                    else if (_transTimingService.TimeToSell(lastTrans, ref maxPrice, price,timestamp, 10, hasQty))
                     {
                         var volume = _calculateVolumeService.CalculateSellingVolume(myTransactions.LastOrDefault().TransVolume);
                         myTransactions.Add(new StockTransaction
@@ -237,6 +234,7 @@ namespace Stock.Analysis._0607.Service
                         hasQty = !hasQty;
                         maxPrice = 0;
                     }
+                    check = _transTimingService.TrueCheckGoldCross(check, shortMaVal, longMaVal);
                 }
 
                 index++;

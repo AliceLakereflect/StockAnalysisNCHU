@@ -109,6 +109,23 @@ namespace Stock.Analysis._0607.Service
                 }
             }
         }
+
+        public void OutputEarn(List<StockTransList> MyTransList, string fileName)
+        {
+            var path = Path.Combine(Environment.CurrentDirectory, $"Output/{fileName}.csv");
+            using (var writer = new StreamWriter(path))
+            using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
+            {
+                csv.WriteHeader<StockTransList>();
+                csv.NextRecord();
+                foreach (var myTrans in MyTransList)
+                {
+                    csv.WriteRecord(myTrans);
+                    csv.WriteField(myTrans.Transactions.Last().Balance);
+                    csv.NextRecord();
+                }
+            }
+        }
         public List<List<StockModel>> ReadDataFromFile(string path)
         {
             Console.WriteLine($"Getting data from {path}");
@@ -171,5 +188,6 @@ namespace Stock.Analysis._0607.Service
         void OutputResult<T>(List<T> chartDataList, string fileName);
         void OutputCsv(List<ChartData> chartDataList, string fileName);
         void OutputTransaction(List<StockTransList> MyTransList, string fileName);
+        void OutputEarn(List<StockTransList> MyTransList, string fileName);
     }
 }

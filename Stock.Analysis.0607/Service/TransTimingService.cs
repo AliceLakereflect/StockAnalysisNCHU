@@ -11,31 +11,31 @@ namespace Stock.Analysis._0607.Service
         {
         }
 
-        public void IfMissedBuying(ref bool missedBuying, ref bool first, double? shortMaVal, double? longMaVal)
+        public bool TrueCheckGoldCross(bool check, double? shortMaVal, double? longMaVal)
         {
-            if (first && shortMaVal >= longMaVal)
+            if (!check && shortMaVal <= longMaVal)
             {
-                missedBuying = true;
+                check = true;
             }
-            first = false;
-            if (missedBuying && shortMaVal < longMaVal)
+            else if (check && shortMaVal >= longMaVal)
             {
-                missedBuying = false;
+                check = false;
             }
+            return check;
         }
 
         // 黃金交叉
-        public bool TimeToBuy(double? shortMaVal, double? longMaVal, bool hasQty, bool missedBuying)
+        public bool TimeToBuy(double? shortMaVal, double? longMaVal, bool hasQty, bool check)
         {
-            return shortMaVal >= longMaVal && hasQty == false && !missedBuying;
+            return shortMaVal >= longMaVal && hasQty == false && check;
         }
 
         // 黃金交叉且均線向上
-        public bool TimeToBuy(int index, List<double?> shortMaValList, List<double?> longMaValList, bool hasQty, bool missedBuying)
+        public bool TimeToBuy(int index, List<double?> shortMaValList, List<double?> longMaValList, bool hasQty, bool check)
         {
             var shortMaVal = shortMaValList[index];
             var longMaVal = longMaValList[index];
-            var condition1 = shortMaVal >= longMaVal && !hasQty && !missedBuying;
+            var condition1 = shortMaVal >= longMaVal && !hasQty && check;
             bool condition2;
             if (index == 0)
             {
@@ -56,22 +56,41 @@ namespace Stock.Analysis._0607.Service
             return shortMaVal <= longMaVal && hasQty == true;
         }
 
-        // 移動停損
-        public bool TimeToSell(double lastTransTime, ref double maxPrice, double price, double currentTime, bool hasQty)
+        // 一般停損
+        public bool TimeToSell(double currentPrice, double buyPrice, double sellPct, bool hasQty)
         {
             if (!hasQty)
             {
                 return false;
             }
-            if (currentTime > lastTransTime)
+            var lossPrice = buyPrice * (100 - sellPct) / 100;
+            var earnPrice = buyPrice * (100 + sellPct) / 100;
+            if (currentPrice <= lossPrice || currentPrice >= earnPrice)
             {
-                if (price > maxPrice)
-                {
-                    maxPrice = price;
-                }
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
 
-                var stopPrice = maxPrice * (1 - 0.1);
-                if (price <= stopPrice)
+        // 移動停損
+        public bool TimeToSell(StockTransaction lastTrans, ref double maxPrice, double currentPrice,
+            double currentTime, double sellPct, bool hasQty)
+        {
+            if (!hasQty)
+            {
+                return false;
+            }
+            if (currentTime > lastTrans.TransTime)
+            {
+                if (currentPrice > maxPrice)
+                {
+                    maxPrice = currentPrice;
+                }
+                double stopPrice = calculateStopPrice(lastTrans.TransPrice, maxPrice, sellPct);
+                if (currentPrice <= stopPrice)
                 {
                     return true;
                 }
@@ -86,14 +105,28 @@ namespace Stock.Analysis._0607.Service
             }
         }
 
+        private static double calculateStopPrice(double lastTransPrice, double maxPrice, double sellPct)
+        {
+            var stopPrice = maxPrice * (100 - sellPct) / 100;
+            var lossSellPrice = lastTransPrice * (100 - sellPct / 10) / 100;
+            if (lossSellPrice > stopPrice)
+            {
+                return lossSellPrice;
+            }
+            else
+            {
+                return stopPrice;
+            }
+        }
     }
 
     public interface ITransTimingService
     {
-        void IfMissedBuying(ref bool missedBuying, ref bool first, double? shortMaVal, double? longMaVal);
-        bool TimeToBuy(double? shortMaVal, double? longMaVal, bool hasQty, bool missedBuying);
-        bool TimeToBuy(int index, List<double?> shortMaVal, List<double?> longMaVal, bool hasQty, bool missedBuying);
+        bool TrueCheckGoldCross(bool check, double? shortMaVal, double? longMaVal);
+        bool TimeToBuy(double? shortMaVal, double? longMaVal, bool hasQty, bool check);
+        bool TimeToBuy(int index, List<double?> shortMaVal, List<double?> longMaVal, bool hasQty, bool check);
         bool TimeToSell(double? shortMaVal, double? longMaVal, bool hasQty);
-        bool TimeToSell(double lastTransTime, ref double maxPrice, double currentPrice, double currentTime, bool hasQty);
+        bool TimeToSell(double currentPrice, double buyPrice, double sellPct, bool hasQty);
+        bool TimeToSell(StockTransaction lastTrans, ref double maxPrice, double currentPrice, double currentTime, double sellPct, bool hasQty);
     }
 }
