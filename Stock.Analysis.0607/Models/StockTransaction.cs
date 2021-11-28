@@ -13,6 +13,11 @@ namespace Stock.Analysis._0607.Models
         public int Fees { get; set; } = 0;
         public int Tax { get; set; } = 0;
         public double Balance { get; set; } = 0;
+        // for validation
+        public double? ShortMaPrice1DayBefore { get; set; }
+        public double? LongMaPrice1DayBefore { get; set; }
+        public double? ShortMaPrice { get; set; }
+        public double? LongMaPrice { get; set; }
     }
 
     public class StockTransList

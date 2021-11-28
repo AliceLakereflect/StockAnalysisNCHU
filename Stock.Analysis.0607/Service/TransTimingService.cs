@@ -13,11 +13,11 @@ namespace Stock.Analysis._0607.Service
 
         public bool TrueCheckGoldCross(bool check, double? shortMaVal, double? longMaVal)
         {
-            if (!check && shortMaVal <= longMaVal)
+            if (!check && shortMaVal < longMaVal)
             {
                 check = true;
             }
-            else if (check && shortMaVal >= longMaVal)
+            else if (check && shortMaVal > longMaVal)
             {
                 check = false;
             }
@@ -27,7 +27,7 @@ namespace Stock.Analysis._0607.Service
         // 黃金交叉
         public bool TimeToBuy(double? shortMaVal, double? longMaVal, bool hasQty, bool check)
         {
-            return shortMaVal >= longMaVal && hasQty == false && check;
+            return shortMaVal > longMaVal && hasQty == false && check;
         }
 
         // 黃金交叉且均線向上
@@ -35,7 +35,7 @@ namespace Stock.Analysis._0607.Service
         {
             var shortMaVal = shortMaValList[index];
             var longMaVal = longMaValList[index];
-            var condition1 = shortMaVal >= longMaVal && !hasQty && check;
+            var condition1 = shortMaVal > longMaVal && !hasQty && check;
             bool condition2;
             if (index == 0)
             {
@@ -53,7 +53,7 @@ namespace Stock.Analysis._0607.Service
         // 死亡交叉
         public bool TimeToSell(double? shortMaVal, double? longMaVal, bool hasQty)
         {
-            return shortMaVal <= longMaVal && hasQty == true;
+            return shortMaVal < longMaVal && hasQty == true;
         }
 
         // 一般停損

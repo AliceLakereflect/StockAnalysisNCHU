@@ -207,21 +207,21 @@ namespace Stock.Analysis.Tests.Service
 
             var result = _researchOperationService.GetMyTransactions(testCase.Funds, chartData, dataList, testCase.ShortTermMa, testCase.LongTermMa);
             Assert.Equal(14, result.Count);
-            var expectedBuyTime = new List<string>{ "2020-4-10", "2020-7-7", "2020-7-21", "2020-8-3", "2020-10-8", "2021-2-17", "2021-5-25" };
+            var expectedBuyTime = new List<string>{ "2020-4-10", "2020-7-7", "2020-7-22", "2020-8-3", "2020-10-8", "2021-2-17", "2021-5-25" };
             var index = 0;
             Assert.All(result.FindAll(t=>t.TransType == TransactionType.Buy), trans=> {
                 Assert.Equal(expectedBuyTime.ElementAt(index), trans.TransTimeString);
                 index++;
             });
-            var expectedSellTime = new List<string> { "2020-6-15", "2020-7-14", "2020-7-23", "2020-9-17", "2021-1-18", "2021-5-18" };
+            var expectedSellTime = new List<string> { "2020-6-16", "2020-7-14", "2020-7-23", "2020-9-17", "2021-1-18", "2021-5-18" };
             index = 0;
             Assert.All(result.FindAll(t => t.TransType == TransactionType.Sell), trans => {
                 Assert.Equal(expectedSellTime.ElementAt(index), trans.TransTimeString);
                 index++;
             });
             
-            var expectedBalance = new List<double> { 100000, 8200, 104950, 3700, 100000, 1450, 99100, 10700, 139500, 6300, 278300, 21400, 507200, 12800  };
-            var expectedVolume = new List<int> { 0, 9000, 9000, 9000, 9000, 9000, 9000, 8000, 8000, 8000, 8000, 7000, 7000, 6000 };
+            var expectedBalance = new List<double> { 100000, 8200, 109450, 8200, 104500, 5950, 103600, 4150, 149050, 15850, 287850, 30950, 516750, 22350  };
+            var expectedVolume = new List<int> { 0, 9000, 9000, 9000, 9000, 9000, 9000, 9000, 9000, 8000, 8000, 7000, 7000, 6000 };
             index = 0;
             Assert.All(result, trans => {
                 Assert.Equal(expectedBalance.ElementAt(index), trans.Balance);
@@ -230,10 +230,10 @@ namespace Stock.Analysis.Tests.Service
             });
 
             var settlement = _researchOperationService.Settlement(197, result, testCase, Utils.ConvertToUnixTimestamp(periodEnd));
-            Assert.Contains("1094800", settlement);
+            Assert.Contains("1104350", settlement);
             var lastTrans = result.LastOrDefault();
             Assert.Equal("2021-6-30", lastTrans.TransTimeString);
-            Assert.Equal(1194800, lastTrans.Balance);
+            Assert.Equal(1204350, lastTrans.Balance);
             Assert.Equal(6000, lastTrans.TransVolume);
             Assert.Equal(197, lastTrans.TransPrice);
         }
