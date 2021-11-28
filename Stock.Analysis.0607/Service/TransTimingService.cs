@@ -25,8 +25,11 @@ namespace Stock.Analysis._0607.Service
         }
 
         // 黃金交叉
-        public bool TimeToBuy(double? shortMaVal, double? longMaVal, bool hasQty, bool check)
+        public bool TimeToBuy(List<double?> shortMaList, List<double?> longMaList, int index, bool hasQty)
         {
+            var shortMaVal = shortMaList[index];
+            var longMaVal = longMaList[index];
+            var check = index != 0 && shortMaList[index - 1] <= longMaList[index - 1];
             return shortMaVal > longMaVal && hasQty == false && check;
         }
 
@@ -51,9 +54,12 @@ namespace Stock.Analysis._0607.Service
         }
 
         // 死亡交叉
-        public bool TimeToSell(double? shortMaVal, double? longMaVal, bool hasQty)
+        public bool TimeToSell(List<double?> shortMaList, List<double?> longMaList, int index, bool hasQty)
         {
-            return shortMaVal < longMaVal && hasQty == true;
+            var shortMaVal = shortMaList[index];
+            var longMaVal = longMaList[index];
+            var check = index != 0 && shortMaList[index - 1] >= longMaList[index - 1];
+            return shortMaVal < longMaVal && hasQty == true && check;
         }
 
         // 一般停損
@@ -123,9 +129,9 @@ namespace Stock.Analysis._0607.Service
     public interface ITransTimingService
     {
         bool TrueCheckGoldCross(bool check, double? shortMaVal, double? longMaVal);
-        bool TimeToBuy(double? shortMaVal, double? longMaVal, bool hasQty, bool check);
+        bool TimeToBuy(List<double?> shortMaList, List<double?> longMaList, int index, bool hasQty);
         bool TimeToBuy(int index, List<double?> shortMaVal, List<double?> longMaVal, bool hasQty, bool check);
-        bool TimeToSell(double? shortMaVal, double? longMaVal, bool hasQty);
+        bool TimeToSell(List<double?> shortMaList, List<double?> longMaList, int index, bool hasQty);
         bool TimeToSell(double currentPrice, double buyPrice, double sellPct, bool hasQty);
         bool TimeToSell(StockTransaction lastTrans, ref double maxPrice, double currentPrice, double currentTime, double sellPct, bool hasQty);
     }

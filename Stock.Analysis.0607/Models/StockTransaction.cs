@@ -14,10 +14,14 @@ namespace Stock.Analysis._0607.Models
         public int Tax { get; set; } = 0;
         public double Balance { get; set; } = 0;
         // for validation
-        public double? ShortMaPrice1DayBefore { get; set; }
-        public double? LongMaPrice1DayBefore { get; set; }
-        public double? ShortMaPrice { get; set; }
-        public double? LongMaPrice { get; set; }
+        public double? BuyShortMaPrice1DayBefore { get; set; }
+        public double? BuyLongMaPrice1DayBefore { get; set; }
+        public double? BuyShortMaPrice { get; set; }
+        public double? BuyLongMaPrice { get; set; }
+        public double? SellShortMaPrice1DayBefore { get; set; }
+        public double? SellLongMaPrice1DayBefore { get; set; }
+        public double? SellShortMaPrice { get; set; }
+        public double? SellLongMaPrice { get; set; }
     }
 
     public class StockTransList

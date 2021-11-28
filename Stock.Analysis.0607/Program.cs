@@ -20,7 +20,7 @@ namespace Stock.Analysis._0607
             var chartDataList = new List<ChartData>();
             var myTransList = new List<StockTransList>();
             List<TestCase> testCase = new List<TestCase>  {
-                new TestCase { Funds = 100000, BuyShortTermMa = 5, BuyLongTermMa = 20, SellShortTermMa = 5, SellLongTermMa = 20  },
+                new TestCase { Funds = 100000, BuyShortTermMa = 5, BuyLongTermMa = 20, SellShortTermMa = 5, SellLongTermMa = 60  },
                 //new TestCase { Funds = 100000, BuyShortTermMa = 5, BuyLongTermMa = 60, SellShortTermMa = 5, SellLongTermMa = 60 },
                 //new TestCase { Funds = 100000, BuyShortTermMa = 10, BuyLongTermMa = 20, SellShortTermMa = 10, SellLongTermMa = 20 },
                 //new TestCase { Funds = 100000, BuyShortTermMa = 10, BuyLongTermMa = 60, SellShortTermMa = 10, SellLongTermMa = 60 },
@@ -50,7 +50,7 @@ namespace Stock.Analysis._0607
                 chartDataList.Add(data);
                 testCase.ForEach(currentTestCase =>
                 {
-                    var myTrans = _researchOperationService.GetMyTransactionsOddShares(currentTestCase.Funds, data, stockList, currentTestCase);
+                    var myTrans = _researchOperationService.GetMyTransactionsOddShares(data, stockList, currentTestCase);
                     myTransList.Add(new StockTransList { Name = symbol, TestCase = currentTestCase, Transactions = myTrans });
                     string resultString = _researchOperationService.Settlement(currentStock, myTrans, currentTestCase, Utils.ConvertToUnixTimestamp(periodEnd));
                     //if (!resultString.Contains("Earned: 0"))

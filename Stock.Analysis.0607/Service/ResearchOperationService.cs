@@ -80,19 +80,19 @@ namespace Stock.Analysis._0607.Service
                     TransPrice = price,
                     TransType = TransactionType.Sell,
                     TransVolume = myTrans.Last().TransVolume,
-                    Balance = myTrans.Last().Balance + Math.Round(currentStock * myTrans.Last().TransVolume)
+                    Balance = myTrans.Last().Balance + Math.Round(currentStock * myTrans.Last().TransVolume, MidpointRounding.ToZero)
                 });
             }
             var buy = myTrans.Where(trans => trans.TransType == TransactionType.Buy)
-                .Sum(trans => Math.Round(trans.TransPrice * trans.TransVolume));
+                .Sum(trans => Math.Round(trans.TransPrice * trans.TransVolume, MidpointRounding.ToZero));
             var sell = myTrans.Where(trans => trans.TransType == TransactionType.Sell)
-                .Sum(trans => Math.Round(trans.TransPrice * trans.TransVolume));
+                .Sum(trans => Math.Round(trans.TransPrice * trans.TransVolume, MidpointRounding.ToZero));
             var earn = sell - buy;
             var resultString = $"When ma = Buy: {ma.BuyShortTermMa} vs {ma.BuyLongTermMa}; Sell: {ma.SellShortTermMa} vs {ma.SellLongTermMa};,\tEarned: {earn}\t";
             return resultString;
         }
 
-        public List<StockTransaction> GetMyTransactions(double funds, ChartData data, List<StockModel> stockList, int shortTermMa, int LongTermMa)
+        public List<StockTransaction> GetMyTransactionsOddShares(ChartData data, List<StockModel> stockList, TestCase testCase)
         {
             var myTransactions = new List<StockTransaction>();
             myTransactions.Add(new StockTransaction
@@ -102,82 +102,7 @@ namespace Stock.Analysis._0607.Service
                 TransPrice = 0,
                 TransVolume = 0,
                 TransType = TransactionType.AddFunds,
-                Balance = funds
-            });
-            var symbol = data.Name;
-            var index = 0;
-            List<double?> shortMaValList;
-            List<double?> longMaValList;
-            shortMaValList = !data.GetMaValue(shortTermMa).Any()
-                ? _movingAvgService.CalculateMovingAvarage(stockList, shortTermMa).Select(stock => stock.Price).ToList()
-                : data.GetMaValue(shortTermMa);
-
-            longMaValList = !data.GetMaValue(LongTermMa).Any()
-                ? _movingAvgService.CalculateMovingAvarage(stockList, LongTermMa).Select(stock => stock.Price).ToList()
-                : data.GetMaValue(LongTermMa);
-
-            bool hasQty = false;
-            var check = false;
-            double maxPrice = 0;
-            data.Timestamp.ForEach(timestamp =>
-            {
-                var shortMaVal = shortMaValList[index];
-                var longMaVal = longMaValList[index];
-                var timeString = Utils.UnixTimeStampToDateTime(timestamp);
-                if (shortMaVal != null && longMaVal != null)
-                {
-                    var price = data.Price[index] ?? 0;
-                    price = Math.Round(price, 2, MidpointRounding.AwayFromZero);
-                    var lastTrans = myTransactions.Any() ? myTransactions.LastOrDefault() : new StockTransaction();
-                    var lastTransTime = lastTrans.TransTime;
-                    if (_transTimingService.TimeToBuy(shortMaVal, longMaVal, hasQty, check))
-                    {
-                        var volume = _calculateVolumeService.CalculateBuyingVolume(lastTrans.Balance, price);
-                        myTransactions.Add(new StockTransaction
-                        {
-                            TransTime = timestamp,
-                            TransTimeString = $"{timeString.Year}-{timeString.Month}-{timeString.Day}",
-                            TransPrice = price,
-                            TransType = TransactionType.Buy,
-                            TransVolume = volume,
-                            Balance = lastTrans.Balance - Math.Round(price * volume)
-                        });
-                        hasQty = !hasQty;
-                    }
-                    else if (_transTimingService.TimeToSell(shortMaVal, longMaVal, hasQty))
-                    {
-                        var volume = _calculateVolumeService.CalculateSellingVolume(myTransactions.LastOrDefault().TransVolume);
-                        myTransactions.Add(new StockTransaction
-                        {
-                            TransTime = timestamp,
-                            TransTimeString = $"{timeString.Year}-{timeString.Month}-{timeString.Day}",
-                            TransPrice = price,
-                            TransType = TransactionType.Sell,
-                            TransVolume = volume,
-                            Balance = lastTrans.Balance + Math.Round(price * volume)
-                        });
-                        hasQty = !hasQty;
-                        maxPrice = 0;
-                    }
-                    check = _transTimingService.TrueCheckGoldCross(check, shortMaVal, longMaVal);
-                }
-
-                index++;
-            });
-
-            return myTransactions;
-        }
-        public List<StockTransaction> GetMyTransactionsOddShares(double funds, ChartData data, List<StockModel> stockList, TestCase testCase)
-        {
-            var myTransactions = new List<StockTransaction>();
-            myTransactions.Add(new StockTransaction
-            {
-                TransTime = 0,
-                TransTimeString = string.Empty,
-                TransPrice = 0,
-                TransVolume = 0,
-                TransType = TransactionType.AddFunds,
-                Balance = funds
+                Balance = testCase.Funds
             });
             var symbol = data.Name;
             var index = 0;
@@ -205,17 +130,13 @@ namespace Stock.Analysis._0607.Service
             double maxPrice = 0;
             data.Timestamp.ForEach(timestamp =>
             {
-                var buyShortMaVal = buyShortMaValList[index];
-                var buyLongMaVal = buyLongMaValList[index];
-                var sellShortMaVal = sellShortMaValList[index];
-                var sellLongMaVal = sellLongMaValList[index];
                 var timeString = Utils.UnixTimeStampToDateTime(timestamp);
-                if (buyShortMaVal != null && buyLongMaVal != null && sellShortMaVal != null && sellLongMaVal != null)
+                if (buyShortMaValList[index] != null && buyLongMaValList[index] != null && sellShortMaValList[index] != null && sellLongMaValList[index] != null)
                 {
                     var price = data.Price[index] ?? 0;
                     price = Math.Round(price, 2, MidpointRounding.AwayFromZero);
                     var lastTrans = myTransactions.Any() ? myTransactions.LastOrDefault() : new StockTransaction();
-                    if (_transTimingService.TimeToBuy(buyShortMaVal, buyLongMaVal, hasQty, check))
+                    if (_transTimingService.TimeToBuy(buyShortMaValList, buyLongMaValList, index, hasQty))
                     {
                         var volume = _calculateVolumeService.CalculateBuyingVolumeOddShares(lastTrans.Balance, price);
                         myTransactions.Add(new StockTransaction
@@ -226,16 +147,16 @@ namespace Stock.Analysis._0607.Service
                             TransType = TransactionType.Buy,
                             TransVolume = volume,
                             Balance = lastTrans.Balance - Math.Round(price * volume, MidpointRounding.ToZero),
-                            ShortMaPrice = data.PriceAvg5Days[index],
-                            LongMaPrice = data.PriceAvg20Days[index],
-                            ShortMaPrice1DayBefore = data.PriceAvg5Days[index-1],
-                            LongMaPrice1DayBefore = data.PriceAvg20Days[index-1],
+                            BuyShortMaPrice = buyShortMaValList[index],
+                            BuyLongMaPrice = buyLongMaValList[index],
+                            BuyShortMaPrice1DayBefore = buyShortMaValList[index-1],
+                            BuyLongMaPrice1DayBefore = buyLongMaValList[index-1],
                         });
                         hasQty = !hasQty;
                     }
                     // todo: 停損比例改為參數，從testcase丟進來
                     // todo: 注意現在是用哪一種時機點
-                    else if (_transTimingService.TimeToSell(sellShortMaVal, sellLongMaVal, hasQty))
+                    else if (_transTimingService.TimeToSell(sellShortMaValList, sellLongMaValList, index, hasQty))
                     {
                         var volume = _calculateVolumeService.CalculateSellingVolume(myTransactions.LastOrDefault().TransVolume);
                         myTransactions.Add(new StockTransaction
@@ -246,15 +167,14 @@ namespace Stock.Analysis._0607.Service
                             TransType = TransactionType.Sell,
                             TransVolume = volume,
                             Balance = lastTrans.Balance + Math.Round(price * volume, MidpointRounding.ToZero),
-                            ShortMaPrice = data.PriceAvg5Days[index],
-                            LongMaPrice = data.PriceAvg20Days[index],
-                            ShortMaPrice1DayBefore = data.PriceAvg5Days[index - 1],
-                            LongMaPrice1DayBefore = data.PriceAvg20Days[index - 1],
+                            SellShortMaPrice = sellShortMaValList[index],
+                            SellLongMaPrice = sellLongMaValList[index],
+                            SellShortMaPrice1DayBefore = sellShortMaValList[index - 1],
+                            SellLongMaPrice1DayBefore = sellLongMaValList[index - 1],
                         });
                         hasQty = !hasQty;
                         maxPrice = 0;
                     }
-                    check = _transTimingService.TrueCheckGoldCross(check, buyShortMaVal, buyLongMaVal);
                 }
 
                 index++;
@@ -269,7 +189,6 @@ namespace Stock.Analysis._0607.Service
         List<ChartData> GetMaFromCsv(string path);
         ChartData GetMaFromYahoo(string symbol, List<StockModel> stockList);
         string Settlement(double currentStock, List<StockTransaction> myTrans, TestCase ma, double periodEnd);
-        List<StockTransaction> GetMyTransactions(double funds, ChartData data, List<StockModel> stockList, int shortTermMa, int LongTermMa);
-        List<StockTransaction> GetMyTransactionsOddShares(double funds, ChartData data, List<StockModel> stockList, TestCase testCase);
+        List<StockTransaction> GetMyTransactionsOddShares(ChartData data, List<StockModel> stockList, TestCase testCase);
     }
 }

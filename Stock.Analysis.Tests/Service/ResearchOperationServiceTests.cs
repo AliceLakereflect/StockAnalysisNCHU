@@ -16,6 +16,7 @@ namespace Stock.Analysis.Tests.Service
         DateTime _dateTime;
         ChartData _historicalData;
         List<StockModel> _stockList = new List<StockModel>();
+        TestCase _testCase = new TestCase { Funds = 100000, BuyShortTermMa = 5, BuyLongTermMa = 20, SellShortTermMa = 5, SellLongTermMa = 20 };
 
         public ResearchOperationServiceTests()
         {
@@ -26,7 +27,9 @@ namespace Stock.Analysis.Tests.Service
         [Fact]
         public void GetMyTransactionsTest0()
         {
-            var transactionsList = _researchOperationService.GetMyTransactions(100, _historicalData, _stockList, 5, 20);
+            var testCase = _testCase.DeepClone();
+            testCase.Funds = 100;
+            var transactionsList = _researchOperationService.GetMyTransactionsOddShares(_historicalData, _stockList, testCase);
             Assert.Single(transactionsList);
             Assert.All(transactionsList, trans=> {
                 Assert.Equal(TransactionType.AddFunds, trans.TransType);
@@ -38,7 +41,9 @@ namespace Stock.Analysis.Tests.Service
         {
             var historicalData = _historyRepository.GetConcussiveHistoryData();
             var stockList = _historyRepository.GetConcussiveStockList();
-            var transactionsList = _researchOperationService.GetMyTransactions(18000, historicalData, stockList, 5, 20);
+            var testCase = _testCase.DeepClone();
+            testCase.Funds = 18000;
+            var transactionsList = _researchOperationService.GetMyTransactionsOddShares(historicalData, stockList, testCase);
             Assert.Equal(3,transactionsList.Count);
             Assert.Equal(18, transactionsList.Find(t=>t.TransType == TransactionType.Buy).TransPrice);
             Assert.Equal(1000, transactionsList.Find(t => t.TransType == TransactionType.Buy).TransVolume);
@@ -47,10 +52,9 @@ namespace Stock.Analysis.Tests.Service
         }
 
         [Theory]
-        [InlineData(18,0)]
-        [InlineData(18000,1000)]
-        [InlineData(37000,2000)]
-        [InlineData(60000,3000)]
+        [InlineData(18, 1)]
+        [InlineData(37, 2)]
+        [InlineData(60, 3)]
         public void GetMyTransactionsTestVolumn(double funds, int volumns)
         {
             var historicalData = new ChartData
@@ -96,8 +100,9 @@ namespace Stock.Analysis.Tests.Service
             historicalData.Timestamp = stockList.Select(s => s.Date).ToList();
             historicalData.PriceAvg5Days = _movingAvarageService.CalculateMovingAvarage(stockList, 5).Select(s => s.Price).ToList();
             historicalData.PriceAvg20Days = _movingAvarageService.CalculateMovingAvarage(stockList, 20).Select(s => s.Price).ToList();
-
-            var transactionsList = _researchOperationService.GetMyTransactions(funds, historicalData, stockList, 5, 20);
+            var testCase = _testCase.DeepClone();
+            testCase.Funds = funds;
+            var transactionsList = _researchOperationService.GetMyTransactionsOddShares(historicalData, stockList, testCase);
             Assert.Equal(3, transactionsList.Count);
             Assert.Equal(volumns, transactionsList.Find(t => t.TransType == TransactionType.Buy).TransVolume);
             Assert.Equal(volumns, transactionsList.Find(t => t.TransType == TransactionType.Sell).TransVolume);
@@ -146,10 +151,10 @@ namespace Stock.Analysis.Tests.Service
                     TransVolume = 1
                 }
             };
-            var testCase = new TestCase { ShortTermMa = 5, LongTermMa = 20};
+            var testCase = new TestCase { BuyShortTermMa = 5, BuyLongTermMa = 20, SellShortTermMa = 5, SellLongTermMa = 20 };
             var periodEnd = new DateTime(2021, 7, 1, 0, 0, 0);
             var resultMsg = _researchOperationService.Settlement(140, myTrans, testCase, Utils.ConvertToUnixTimestamp(periodEnd));
-            Assert.Contains("When ma = 5 vs 20,\tEarned: 20", resultMsg);
+            Assert.Contains("When ma = Buy: 5 vs 20; Sell: 5 vs 20;,\tEarned: 20", resultMsg);
         }
 
         [Theory]
@@ -177,10 +182,10 @@ namespace Stock.Analysis.Tests.Service
                     TransVolume = secondVolumn
                 }
             };
-            var testCase = new TestCase { Funds = 140, ShortTermMa = 5, LongTermMa = 20 };
+            var testCase = new TestCase { Funds = 140, BuyShortTermMa = 5, BuyLongTermMa = 20, SellShortTermMa = 5, SellLongTermMa = 20 };
             var periodEnd = new DateTime(2021, 7, 1, 0, 0, 0);
             var resultMsg = _researchOperationService.Settlement(currentStock, myTrans, testCase, Utils.ConvertToUnixTimestamp(periodEnd));
-            Assert.Contains($"When ma = 5 vs 20,\tEarned: {expectedEarned}", resultMsg);
+            Assert.Contains($"When ma = Buy: 5 vs 20; Sell: 5 vs 20;,\tEarned: {expectedEarned}", resultMsg);
         }
 
         [Fact]
@@ -189,8 +194,7 @@ namespace Stock.Analysis.Tests.Service
             var testCase = new TestCase
             {
                 Funds = 100000,
-                ShortTermMa = 5,
-                LongTermMa = 20
+                BuyShortTermMa = 5, BuyLongTermMa = 20, SellShortTermMa = 5, SellLongTermMa = 20
             };
             var periodEnd = new DateTime(2021, 6, 30, 0, 0, 0);
             var dataList = _historyRepository.GetRealData1yOf2603();
@@ -205,7 +209,7 @@ namespace Stock.Analysis.Tests.Service
             chartData.PriceAvg5Days = _movingAvarageService.CalculateMovingAvarage(dataList, 5).Select(s => s.Price).ToList();
             chartData.PriceAvg20Days = _movingAvarageService.CalculateMovingAvarage(dataList, 20).Select(s => s.Price).ToList();
 
-            var result = _researchOperationService.GetMyTransactions(testCase.Funds, chartData, dataList, testCase.ShortTermMa, testCase.LongTermMa);
+            var result = _researchOperationService.GetMyTransactionsOddShares(chartData, dataList, testCase);
             Assert.Equal(14, result.Count);
             var expectedBuyTime = new List<string>{ "2020-4-10", "2020-7-7", "2020-7-22", "2020-8-3", "2020-10-8", "2021-2-17", "2021-5-25" };
             var index = 0;
@@ -219,9 +223,9 @@ namespace Stock.Analysis.Tests.Service
                 Assert.Equal(expectedSellTime.ElementAt(index), trans.TransTimeString);
                 index++;
             });
-            
-            var expectedBalance = new List<double> { 100000, 8200, 109450, 8200, 104500, 5950, 103600, 4150, 149050, 15850, 287850, 30950, 516750, 22350  };
-            var expectedVolume = new List<int> { 0, 9000, 9000, 9000, 9000, 9000, 9000, 9000, 9000, 8000, 8000, 7000, 7000, 6000 };
+
+            var expectedBalance = new List<double> { 100000, 10, 110293, 10, 104902, 1, 103944, 8, 151444, 13, 309243, 9, 584773, 63 };
+            var expectedVolume = new List<int> { 0, 9803, 9803, 9803, 9803, 9580, 9580, 9406, 9406, 9095, 9095, 8426, 8426, 7096 };
             index = 0;
             Assert.All(result, trans => {
                 Assert.Equal(expectedBalance.ElementAt(index), trans.Balance);
@@ -230,11 +234,11 @@ namespace Stock.Analysis.Tests.Service
             });
 
             var settlement = _researchOperationService.Settlement(197, result, testCase, Utils.ConvertToUnixTimestamp(periodEnd));
-            Assert.Contains("1104350", settlement);
+            Assert.Contains("1297975", settlement);
             var lastTrans = result.LastOrDefault();
             Assert.Equal("2021-6-30", lastTrans.TransTimeString);
-            Assert.Equal(1204350, lastTrans.Balance);
-            Assert.Equal(6000, lastTrans.TransVolume);
+            Assert.Equal(1397975, lastTrans.Balance);
+            Assert.Equal(7096, lastTrans.TransVolume);
             Assert.Equal(197, lastTrans.TransPrice);
         }
     }

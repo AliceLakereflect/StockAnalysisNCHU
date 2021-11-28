@@ -16,10 +16,9 @@ namespace Stock.Analysis.Tests.Service
 
         [Theory]
         [MemberData(nameof(CalculatorData.TimeToBuy), MemberType = typeof(CalculatorData))]
-        public void TimeToBuyTest(bool expected, List<double?> shortMaValList, List<double?> longMaValList, bool hasQty,
-            bool check)
+        public void TimeToBuyTest(bool expected, List<double?> shortMaValList, List<double?> longMaValList, bool hasQty)
         {
-            var buyOrNot = _transTimingService.TimeToBuy(shortMaValList.First(), longMaValList.First(), hasQty, check);
+            var buyOrNot = _transTimingService.TimeToBuy(shortMaValList, longMaValList, 1, hasQty);
             Assert.Equal(expected, buyOrNot);
         }
 
@@ -41,7 +40,7 @@ namespace Stock.Analysis.Tests.Service
         [InlineData(10.8, null, true, false)]
         public void TimeToSellTest(double? shortMaVal, double? longMaVal, bool hasQty, bool expected)
         {
-            var result = _transTimingService.TimeToSell(shortMaVal, longMaVal, hasQty);
+            var result = _transTimingService.TimeToSell(new List<double?> { 1, shortMaVal }, new List<double?> { 0,longMaVal }, 1, hasQty);
             Assert.Equal(expected, result);
         }
 
@@ -103,10 +102,9 @@ namespace Stock.Analysis.Tests.Service
         new List<object[]>
         {
             // 黃金交叉
-            new object[] { true, new List<double?> { 10 }, new List<double?> { 5 }, false, true },
-            new object[] { false, new List<double?> { 5 }, new List<double?> { 10 }, false, true},
-            new object[] { false, new List<double?> { 10}, new List<double?> { 5 }, true, true },
-            new object[] { false, new List<double?> { 10 }, new List<double?> { 5 }, false, false },
+            new object[] { true, new List<double?> { 0,10 }, new List<double?> { 1,5 }, false },
+            new object[] { false, new List<double?> { 0,5 }, new List<double?> { 1,10 }, false},
+            new object[] { false, new List<double?> { 0,10}, new List<double?> { 1,5 }, true },
         };
         public static IEnumerable<object[]> TimeToBuyAllUp =>
         new List<object[]>

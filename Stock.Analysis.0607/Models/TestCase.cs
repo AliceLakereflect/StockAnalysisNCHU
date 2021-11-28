@@ -7,5 +7,15 @@
         public int BuyLongTermMa { get; set; }
         public int SellShortTermMa { get; set; }
         public int SellLongTermMa { get; set; }
+
+        public TestCase DeepClone()
+        {
+            return new TestCase {
+                Funds = Funds,
+                BuyShortTermMa = BuyShortTermMa,
+                BuyLongTermMa = BuyLongTermMa,
+                SellShortTermMa = SellShortTermMa,
+                SellLongTermMa = SellLongTermMa };
+        }
     }
 }
