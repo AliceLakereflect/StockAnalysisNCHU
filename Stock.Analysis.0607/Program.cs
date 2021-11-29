@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Stock.Analysis._0607.Service;
@@ -29,49 +29,62 @@ namespace Stock.Analysis._0607
                 //new TestCase { Funds = 100000, BuyShortTermMa = 60, BuyLongTermMa = 120, SellShortTermMa = 60, SellLongTermMa = 120 },
                 //new TestCase { Funds = 100000, BuyShortTermMa = 60, BuyLongTermMa = 240, SellShortTermMa = 60, SellLongTermMa = 240 },
             };
-
-            //for (var s = 1; s <= 240; s++)
-            //{
-            //    for (var l = 1; l <= 240 ; l++)
-            //    {
-            //        if (s < l)
-            //        {
-            //            testCase.Add(new TestCase { Funds = 100000, ShortTermMa = s, LongTermMa = l });
-            //        }
-            //    }
-            //}
             stockSymbol.ForEach(symbol =>
             {
                 var periodEnd = new DateTime(2021, 6, 30, 0, 0, 0);
                 var stockList = _dataService.GetPeriodDataFromYahooApi(symbol, new DateTime(2020,1,1,0,0,0), periodEnd.AddDays(1));
                 ChartData data = _researchOperationService.GetMaFromYahoo(symbol, stockList);
                 var currentStock = stockList.Last().Price ?? 0;
-                Console.WriteLine($"{symbol}\t Current Stock: {currentStock}");
+
                 chartDataList.Add(data);
                 testCase.ForEach(currentTestCase =>
                 {
-                    var myTrans = _researchOperationService.GetMyTransactionsOddShares(data, stockList, currentTestCase);
-                    myTransList.Add(new StockTransList { Name = symbol, TestCase = currentTestCase, Transactions = myTrans });
-                    string resultString = _researchOperationService.Settlement(currentStock, myTrans, currentTestCase, Utils.ConvertToUnixTimestamp(periodEnd));
-                    //if (!resultString.Contains("Earned: 0"))
-                    //{
-                        Console.WriteLine(resultString);
-                    //}
-                    var transString = "=== My Transaction ======================================================================================\n";
-                    transString += $"|\tName: {symbol}\t Test Case: {currentTestCase.BuyShortTermMa}MA vs {currentTestCase.BuyLongTermMa}MA \t Current Stock:{stockList.Last().Price}\n";
-                    myTrans.ForEach(t=>
-                    {
-                        transString += $"|\t TransType: {t.TransType}\n|\t TransTime: {t.TransTimeString}\t TransVolume:{t.TransVolume}\t Fees:{t.Fees}\t " +
-                        $"Tax: {t.Tax}\t Balance: {t.Balance}\t TransPrice: {t.TransPrice}\n";
-                    });
-                    transString +=    "=========================================================================================================\n";
-                    //Console.WriteLine(transString);
+                    GetTransactions(symbol, currentTestCase, myTransList, periodEnd, stockList, data, currentStock);
                 });
-                //_fileHandler.OutputEarn(myTransList, $"{symbol} Earn");
-                //myTransList = new List<StockTransList>();
+                _fileHandler.OutputTransaction(myTransList, $"Transactions of {symbol}");
+                myTransList = new List<StockTransList>();
             });
-            _fileHandler.OutputTransaction(myTransList, "AllTransaction");
-            _fileHandler.OutputCsv(chartDataList, "chartDataCsv");
+        }
+
+        #region private method
+
+        private static double GetFitness(
+            string symbol,
+            TestCase currentTestCase,
+            List<StockTransList> myTransList,
+            List<StockModel> stockList,
+            ChartData data)
+        {
+            var transactions = _researchOperationService.GetMyTransactions(data, stockList, currentTestCase);
+            var earns = _researchOperationService.GetEarningsResults(transactions);
+            myTransList.Add(new StockTransList { Name = symbol, TestCase = currentTestCase, Transactions = transactions });
+            return earns;
+        }
+
+        private static void PrintTransactions(
+            string symbol,
+            TestCase currentTestCase,
+            List<StockModel> stockList,
+            List<StockTransaction> myTrans,
+            TestCase ma,
+            double? currentStock)
+        {
+            Console.WriteLine($"{symbol}\t Current Stock: {currentStock}");
+            var earn = _researchOperationService.GetEarningsResults(myTrans);
+            var resultString = $"When ma = Buy: {ma.BuyShortTermMa} vs {ma.BuyLongTermMa}; Sell: {ma.SellShortTermMa} vs {ma.SellLongTermMa};,\tEarned: {earn}\t";
+            if (!resultString.Contains("Earned: 0"))
+            {
+                Console.WriteLine(resultString);
+            }
+            var transString = "=== My Transaction ======================================================================================\n";
+            transString += $"|\tName: {symbol}\t Test Case: {currentTestCase.BuyShortTermMa}MA vs {currentTestCase.BuyLongTermMa}MA \t Current Stock:{stockList.Last().Price}\n";
+            myTrans.ForEach(t =>
+            {
+                transString += $"|\t TransType: {t.TransType}\n|\t TransTime: {t.TransTimeString}\t TransVolume:{t.TransVolume}\t Fees:{t.Fees}\t " +
+                $"Tax: {t.Tax}\t Balance: {t.Balance}\t TransPrice: {t.TransPrice}\n";
+            });
+            transString += "=========================================================================================================\n";
+            Console.WriteLine(transString);
         }
     }
 }

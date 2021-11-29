@@ -66,7 +66,7 @@ namespace Stock.Analysis._0607.Service
             return chartDataList;
         }
 
-        public string Settlement(double currentStock,List<StockTransaction> myTrans, TestCase ma, double periodEnd)
+        public List<StockTransaction> ProfitSettlement(double currentStock, List<StockTransaction> myTrans, double periodEnd)
         {
             var hasQty = myTrans.Last().TransType == TransactionType.Buy;
             if (hasQty)
@@ -83,16 +83,22 @@ namespace Stock.Analysis._0607.Service
                     Balance = myTrans.Last().Balance + Math.Round(currentStock * myTrans.Last().TransVolume, MidpointRounding.ToZero)
                 });
             }
+
+            return myTrans;
+        }
+
+        public double GetEarningsResults(List<StockTransaction> myTrans)
+        {
             var buy = myTrans.Where(trans => trans.TransType == TransactionType.Buy)
                 .Sum(trans => Math.Round(trans.TransPrice * trans.TransVolume, MidpointRounding.ToZero));
             var sell = myTrans.Where(trans => trans.TransType == TransactionType.Sell)
                 .Sum(trans => Math.Round(trans.TransPrice * trans.TransVolume, MidpointRounding.ToZero));
             var earn = sell - buy;
-            var resultString = $"When ma = Buy: {ma.BuyShortTermMa} vs {ma.BuyLongTermMa}; Sell: {ma.SellShortTermMa} vs {ma.SellLongTermMa};,\tEarned: {earn}\t";
-            return resultString;
+            return earn;
         }
 
-        public List<StockTransaction> GetMyTransactionsOddShares(ChartData data, List<StockModel> stockList, TestCase testCase)
+
+        public List<StockTransaction> GetMyTransactions(ChartData data, List<StockModel> stockList, TestCase testCase)
         {
             var myTransactions = new List<StockTransaction>();
             myTransactions.Add(new StockTransaction
@@ -180,6 +186,10 @@ namespace Stock.Analysis._0607.Service
                 index++;
             });
 
+            var currentStock = stockList.Last().Price ?? 0;
+            var periodEnd = data.Timestamp.Last();
+            ProfitSettlement(currentStock, myTransactions, periodEnd);
+
             return myTransactions;
         }
     }
@@ -188,7 +198,8 @@ namespace Stock.Analysis._0607.Service
     {
         List<ChartData> GetMaFromCsv(string path);
         ChartData GetMaFromYahoo(string symbol, List<StockModel> stockList);
-        string Settlement(double currentStock, List<StockTransaction> myTrans, TestCase ma, double periodEnd);
-        List<StockTransaction> GetMyTransactionsOddShares(ChartData data, List<StockModel> stockList, TestCase testCase);
+        List<StockTransaction> ProfitSettlement(double currentStock, List<StockTransaction> myTrans, double periodEnd);
+        double GetEarningsResults(List<StockTransaction> myTrans);
+        List<StockTransaction> GetMyTransactions(ChartData data, List<StockModel> stockList, TestCase testCase);
     }
 }
