@@ -17,7 +17,7 @@ namespace Stock.Analysis._0607
         // QTS paremeters
         const double DELTA = 0.003;
         const int EXPERIMENT_NUMBER = 50;
-        const int GENERATIONS = 500;
+        const int GENERATIONS = 10000;
         const int SEARCH_NODE_NUMBER = 3;
 
         static void Main(string[] args)
@@ -28,31 +28,33 @@ namespace Stock.Analysis._0607
             var chartDataList = new List<ChartData>();
             var myTransList = new List<StockTransList>();
             List<TestCase> testCase = new List<TestCase>  {
-                new TestCase { Funds = FUNDS, BuyShortTermMa = 5, BuyLongTermMa = 20, SellShortTermMa = 5, SellLongTermMa = 60  },
+                new TestCase { Funds = FUNDS, BuyShortTermMa = 5, BuyLongTermMa = 20, SellShortTermMa = 5, SellLongTermMa = 60 },
             };
 
             // stock parameters
             var periodEnd = new DateTime(2021, 6, 30, 0, 0, 0);
-            var stockList = _dataService.GetPeriodDataFromYahooApi(SYMBOL, new DateTime(2020, 1, 1, 0, 0, 0), periodEnd.AddDays(1));
+            var stockList = _dataService.GetPeriodDataFromYahooApi(SYMBOL, new DateTime(2018, 1, 1, 0, 0, 0), periodEnd.AddDays(1));
             ChartData data = _researchOperationService.GetMaFromYahoo(SYMBOL, stockList);
             chartDataList.Add(data);
 
             var iteration = GENERATIONS;
-            var ramdom = new Random(114);
+            var ramdom = new Random(343);
             var gBest = new StatusValue();
             var gWorst = new StatusValue();
+            var localBest = new StatusValue();
+            var localWorst = new StatusValue();
 
             // initialize nodes
             List<Particle> particles = new List<Particle>();
-            particles.Add(new Particle());
-            particles.Add(new Particle());
-            particles.Add(new Particle());
+            for (var i = 0; i < SEARCH_NODE_NUMBER; i++){
+                particles.Add(new Particle());
+            }
 
             MetureX(ramdom, particles);
             var first = true;
             particles.ForEach((p) =>
             {
-                p.CurrentFitness.Fitness = GetFitness(SYMBOL, p.TestCase, myTransList, stockList, data);
+                p.CurrentFitness.Fitness = GetFitness(p.TestCase, stockList, data);
                 if (first) gBest = p.CurrentFitness;
                 else if (gBest.Fitness < p.CurrentFitness.Fitness) gBest = p.CurrentFitness;
 
@@ -62,11 +64,12 @@ namespace Stock.Analysis._0607
             });
 
             // update probability
+            GetLocalBestAndWorst(particles, ref localBest, ref localWorst);
             particles.ForEach((p) =>
             {
                 for (var index = 0; index < 8; index++)
                 {
-                    UpdateProbability(p, gBest, gWorst, index);
+                    UpdateProbability(p, localBest, localWorst, index);
                     index++;
                 };
             });
@@ -76,16 +79,17 @@ namespace Stock.Analysis._0607
                 MetureX(ramdom, particles);
                 particles.ForEach((p) =>
                 {
-                    p.CurrentFitness.Fitness = GetFitness(SYMBOL, p.TestCase, myTransList, stockList, data);
+                    p.CurrentFitness.Fitness = GetFitness(p.TestCase, stockList, data);
                     UpdateGBestAndGWorst(p, ref gBest, ref gWorst);
                 });
 
+                GetLocalBestAndWorst(particles, ref localBest, ref localWorst);
                 // update probability
                 particles.ForEach((p) =>
                 {
                     for (var index = 0; index < 8; index++)
                     {
-                        UpdateProbability(p, gBest, gWorst, index);
+                        UpdateProbability(p, localBest, localWorst, index);
                         index++;
                     };
                 });
@@ -93,7 +97,7 @@ namespace Stock.Analysis._0607
                 iteration--;
             } while (iteration != 0);
 
-            _fileHandler.OutputTransaction(myTransList, $"Transactions of {SYMBOL}");
+            Console.WriteLine(gBest.Fitness);
         }
 
         private static void UpdateGBestAndGWorst(Particle p, ref StatusValue gBest, ref StatusValue gWorst)
@@ -103,8 +107,29 @@ namespace Stock.Analysis._0607
             if (gWorst.Fitness > p.CurrentFitness.Fitness) gWorst = p.CurrentFitness;
         }
 
+        private static void GetLocalBestAndWorst(List<Particle> particles, ref StatusValue localBest, ref StatusValue localWorst)
+        {
+            StatusValue max = particles.First().CurrentFitness;
+            StatusValue min = particles.First().CurrentFitness;
+
+            particles.ForEach((p) =>
+            {
+                if (p.CurrentFitness.Fitness > max.Fitness)
+                {
+                    max = p.CurrentFitness;
+                }
+                if (p.CurrentFitness.Fitness < min.Fitness)
+                {
+                    min = p.CurrentFitness;
+                }
+            });
+            localBest = max;
+            localWorst = min;
+        }
+
         private static void UpdateProbability(Particle p, StatusValue gBest, StatusValue gWorst, int index)
         {
+
             // BuyMa1
             if (gBest.BuyMa2[index] > gWorst.BuyMa1[index])
             {
@@ -180,10 +205,10 @@ namespace Stock.Analysis._0607
                 p.TestCase = new TestCase
                 {
                     Funds = FUNDS,
-                    BuyShortTermMa = buyMa1 < buyMa2 ? buyMa1 : buyMa2,
-                    BuyLongTermMa = buyMa1 < buyMa2 ? buyMa2 : buyMa1,
-                    SellShortTermMa = sellMa1 < sellMa2 ? sellMa1 : sellMa2,
-                    SellLongTermMa = sellMa1 < sellMa2 ? sellMa2 : sellMa1,
+                    BuyShortTermMa = buyMa1,
+                    BuyLongTermMa = buyMa2,
+                    SellShortTermMa = sellMa1,
+                    SellLongTermMa = sellMa2,
                 };
             });
         }
@@ -191,15 +216,12 @@ namespace Stock.Analysis._0607
         #region private method
 
         private static double GetFitness(
-            string symbol,
             TestCase currentTestCase,
-            List<StockTransList> myTransList,
             List<StockModel> stockList,
             ChartData data)
         {
             var transactions = _researchOperationService.GetMyTransactions(data, stockList, currentTestCase);
             var earns = _researchOperationService.GetEarningsResults(transactions);
-            myTransList.Add(new StockTransList { Name = symbol, TestCase = currentTestCase, Transactions = transactions });
             return earns;
         }
 
