@@ -126,6 +126,121 @@ namespace Stock.Analysis._0607.Service
                 }
             }
         }
+
+        public void OutputQTSResult(AlgorithmConst algorithmConst, double funds, StatusValue gBest, List<StockTransaction> transactions, string fileName)
+        {
+            var path = Path.Combine(Environment.CurrentDirectory, $"Output/{fileName}.csv");
+            using (var writer = new StreamWriter(path))
+            using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
+            {
+                csv.WriteField("Algorithm Name");
+                csv.WriteField(algorithmConst.Name);
+                csv.NextRecord();
+                csv.WriteField("Delta");
+                csv.WriteField(algorithmConst.DELTA);
+                csv.NextRecord();
+                csv.WriteField("Experiment Number");
+                csv.WriteField(algorithmConst.EXPERIMENT_NUMBER);
+                csv.NextRecord();
+                csv.WriteField("Generations");
+                csv.WriteField(algorithmConst.GENERATIONS);
+                csv.NextRecord();
+                csv.WriteField("P Amount");
+                csv.WriteField(algorithmConst.SEARCH_NODE_NUMBER);
+                csv.NextRecord();
+
+                csv.NextRecord();
+                csv.WriteField("Initial Capital");
+                csv.WriteField(funds);
+                csv.NextRecord();
+                csv.WriteField("Final Capital");
+                csv.WriteField(gBest.Fitness);
+                csv.NextRecord();
+                csv.WriteField("Final Earn");
+                csv.WriteField(gBest.Fitness - funds);
+                csv.NextRecord();
+
+                csv.NextRecord();
+                csv.WriteField("Buy1");
+                csv.WriteField(GetMaNumber(gBest.BuyMa1));
+                csv.NextRecord();
+                csv.WriteField("Buy2");
+                csv.WriteField(GetMaNumber(gBest.BuyMa2));
+                csv.NextRecord();
+                csv.WriteField("Sell1");
+                csv.WriteField(GetMaNumber(gBest.SellMa1));
+                csv.NextRecord();
+                csv.WriteField("Sell2");
+                csv.WriteField(GetMaNumber(gBest.SellMa2));
+                csv.NextRecord();
+                csv.WriteField("Number of Trades");
+                csv.WriteField((transactions.Count-1)/2);
+                csv.NextRecord();
+                csv.WriteField("Return Rates \n((Final Capital - Initial Capital) / Initial Capital * 100%)");
+                csv.WriteField($"{(gBest.Fitness - funds) / funds * 100} %");
+                csv.NextRecord();
+
+                csv.NextRecord();
+                csv.WriteField("The Experiment Number the Data Obtained in");
+                csv.WriteField(gBest.Experiment);
+                csv.NextRecord();
+                csv.WriteField("The Generation Number the Data Obtained in");
+                csv.WriteField(gBest.Generation);
+                csv.NextRecord();
+                csv.WriteField("Count");
+                csv.WriteField(1);
+                csv.NextRecord();
+
+                csv.NextRecord();
+                csv.WriteField("");
+                csv.WriteField("Date");
+                csv.WriteField("Price");
+                csv.WriteField("The Ma1 Value 1 Day Ago");
+                csv.WriteField("The Ma2 Value 1 Day Ago");
+                csv.WriteField("The Current Ma1 Value");
+                csv.WriteField("The Current Ma2 Value");
+                csv.WriteField("Shares Helds");
+                csv.WriteField("Remaining Capital");
+                csv.WriteField("Total Assets");
+                csv.NextRecord();
+                foreach (var transaction in transactions)
+                {
+                    if (transaction.TransType == TransactionType.AddFunds) continue;
+                    csv.WriteField(transaction.TransType);
+                    csv.WriteField(transaction.TransTimeString);
+                    csv.WriteField(transaction.TransPrice);
+                    if(transaction.TransType == TransactionType.Buy)
+                    {
+                        csv.WriteField(transaction.BuyShortMaPrice1DayBefore);
+                        csv.WriteField(transaction.BuyLongMaPrice1DayBefore);
+                        csv.WriteField(transaction.BuyShortMaPrice);
+                        csv.WriteField(transaction.BuyLongMaPrice);
+                        csv.WriteField(transaction.TransVolume);
+                        csv.WriteField(transaction.Balance);
+                        csv.WriteField(transaction.TransVolume * transaction.TransPrice + transaction.Balance);
+                    }
+                    else if (transaction.TransType == TransactionType.Sell)
+                    {
+                        csv.WriteField(transaction.SellShortMaPrice1DayBefore);
+                        csv.WriteField(transaction.SellShortMaPrice);
+                        csv.WriteField(transaction.SellLongMaPrice1DayBefore);
+                        csv.WriteField(transaction.SellLongMaPrice);
+                        csv.WriteField(0);
+                        csv.WriteField(transaction.Balance);
+                        csv.WriteField(transaction.Balance);
+                        csv.NextRecord();
+                    }
+                    
+                    csv.NextRecord();
+                }
+                csv.NextRecord();
+            }
+        }
+
+        private int GetMaNumber(List<int> metrix)
+        {
+            return metrix[0] * 1 + metrix[1] * 2 + metrix[2] * 4 + metrix[3] * 8 + metrix[4] * 16 + metrix[5] * 32 + metrix[6] * 64 + metrix[7] * 127;
+        }
         public List<List<StockModel>> ReadDataFromFile(string path)
         {
             Console.WriteLine($"Getting data from {path}");
@@ -180,6 +295,22 @@ namespace Stock.Analysis._0607.Service
 
             return result;
         }
+
+        public Queue<int> Readcsv(string fileName)
+        {
+            var result = new Queue<int>();
+            var path = Path.Combine(Environment.CurrentDirectory, $"{fileName}.csv");
+            using (var reader = new StreamReader(path))
+            using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
+            {
+                while (csv.Read())
+                {
+                    var random = csv.GetRecord<int>();
+                    result.Enqueue(random);
+                }
+            }
+            return result;
+        }
     }
 
     public interface IFileHandler
@@ -189,5 +320,7 @@ namespace Stock.Analysis._0607.Service
         void OutputCsv(List<ChartData> chartDataList, string fileName);
         void OutputTransaction(List<StockTransList> MyTransList, string fileName);
         void OutputEarn(List<StockTransList> MyTransList, string fileName);
+        void OutputQTSResult(AlgorithmConst algorithmConst, double funds, StatusValue gBest, List<StockTransaction> transactions, string fileName);
+        Queue<int> Readcsv(string fileName);
     }
 }

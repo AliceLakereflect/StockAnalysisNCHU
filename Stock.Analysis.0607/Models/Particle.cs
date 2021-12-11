@@ -1,9 +1,8 @@
 ﻿using System.Collections.Generic;
-using Stock.Analysis._0607.Models;
 
-namespace Stock.Analysis._0607
+namespace Stock.Analysis._0607.Models
 {
-    class Particle
+    public class Particle
     {
         public StatusValue CurrentFitness { get; set; } = new StatusValue();
         public List<double> BuyMa1Beta { get; set; } = new List<double> { 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5 };

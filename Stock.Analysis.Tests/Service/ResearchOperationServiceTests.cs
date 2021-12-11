@@ -153,7 +153,8 @@ namespace Stock.Analysis.Tests.Service
             };
             var testCase = new TestCase { BuyShortTermMa = 5, BuyLongTermMa = 20, SellShortTermMa = 5, SellLongTermMa = 20 };
             var periodEnd = new DateTime(2021, 7, 1, 0, 0, 0);
-            var transactions = _researchOperationService.ProfitSettlement(140, myTrans, Utils.ConvertToUnixTimestamp(periodEnd));
+            var dataList = _historyRepository.GetRealData1yOf2603();
+            var transactions = _researchOperationService.ProfitSettlement(140, dataList, testCase, myTrans, Utils.ConvertToUnixTimestamp(periodEnd));
             var earn = _researchOperationService.GetEarningsResults(transactions);
             Assert.Equal(20, earn);
         }
@@ -184,7 +185,8 @@ namespace Stock.Analysis.Tests.Service
                 }
             };
             var periodEnd = new DateTime(2021, 7, 1, 0, 0, 0);
-            var transactions = _researchOperationService.ProfitSettlement(currentStock, myTrans, Utils.ConvertToUnixTimestamp(periodEnd));
+            var dataList = _historyRepository.GetRealData1yOf2603();
+            var transactions = _researchOperationService.ProfitSettlement(currentStock, dataList, _testCase, myTrans, Utils.ConvertToUnixTimestamp(periodEnd));
             var earn = _researchOperationService.GetEarningsResults(transactions);
             Assert.Equal(expectedEarned, earn);
         }
@@ -234,7 +236,7 @@ namespace Stock.Analysis.Tests.Service
                 index++;
             });
 
-            var transactions = _researchOperationService.ProfitSettlement(197, result, Utils.ConvertToUnixTimestamp(periodEnd));
+            var transactions = _researchOperationService.ProfitSettlement(197, dataList, testCase, result, Utils.ConvertToUnixTimestamp(periodEnd));
             var earn = _researchOperationService.GetEarningsResults(transactions);
             Assert.Equal(1297975, earn);
             var lastTrans = result.LastOrDefault();
