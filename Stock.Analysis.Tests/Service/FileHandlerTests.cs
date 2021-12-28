@@ -50,10 +50,13 @@ namespace Stock.Analysis.Tests.Service
                 new ChartData{ Name = "0050.TW",
                     Day = new List<string> { "day1", "day2" },
                     Price = new List<double?> { 130.01, 130.25 },
-                    PriceAvg5Days = new List<double?> { 130.01, 130.25 },
-                    PriceAvg10Days = new List<double?> { 130.01, 130.25 },
-                    PriceAvg20Days = new List<double?> { 130.01, 130.25 },
-                    PriceAvg60Days = new List<double?> { 130.01, 130.25 },
+                    MaList = new Dictionary<int, List<double?>>
+                    {
+                        {5, new List<double?> { 130.01, 130.25 }},
+                        {10, new List<double?> { 130.01, 130.25 }},
+                        {20, new List<double?> { 130.01, 130.25 }},
+                        {60, new List<double?> { 130.01, 130.25 }}
+                    },
                     Timestamp = new List<double>{ 1, 2 } }
             };
             _fileHandler.OutputCsv(chartDataList, "chartData");

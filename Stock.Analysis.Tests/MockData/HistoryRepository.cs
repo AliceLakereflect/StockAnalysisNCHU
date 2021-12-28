@@ -45,8 +45,8 @@ namespace Stock.Analysis.Tests.MockData
                 ascHistoryData.Price.Add(i + 10);
             }
             ascHistoryData.Timestamp = ascStockList.Select(s => s.Date).ToList();
-            ascHistoryData.PriceAvg5Days = _movingAvarageService.CalculateMovingAvarage(ascStockList, 5).Select(s => s.Price).ToList();
-            ascHistoryData.PriceAvg20Days = _movingAvarageService.CalculateMovingAvarage(ascStockList, 20).Select(s => s.Price).ToList();
+            ascHistoryData.MaList.Add(5, _movingAvarageService.CalculateMovingAvarage(ascStockList, 5).Select(s => s.Price).ToList());
+            ascHistoryData.MaList.Add(20, _movingAvarageService.CalculateMovingAvarage(ascStockList, 20).Select(s => s.Price).ToList());
 
             return ascHistoryData;
         }
@@ -122,8 +122,8 @@ namespace Stock.Analysis.Tests.MockData
                 dayIndex++;
             }
             concussiveHistoryData.Timestamp = concussiveStockList.Select(s => s.Date).ToList();
-            concussiveHistoryData.PriceAvg5Days = _movingAvarageService.CalculateMovingAvarage(concussiveStockList, 5).Select(s => s.Price).ToList();
-            concussiveHistoryData.PriceAvg20Days = _movingAvarageService.CalculateMovingAvarage(concussiveStockList, 20).Select(s => s.Price).ToList();
+            concussiveHistoryData.MaList.Add(5, _movingAvarageService.CalculateMovingAvarage(concussiveStockList, 5).Select(s => s.Price).ToList());
+            concussiveHistoryData.MaList.Add(20, _movingAvarageService.CalculateMovingAvarage(concussiveStockList, 20).Select(s => s.Price).ToList());
 
             return concussiveHistoryData;
         }

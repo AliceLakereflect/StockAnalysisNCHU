@@ -23,27 +23,45 @@ namespace Stock.Analysis._0607.Service
             return dtDateTime;
         }
 
-        public ChartData GetMaFromYahoo(string symbol, List<StockModel> stockList)
+        public ChartData GetMaFromYahoo(string symbol, List<StockModel> stockList, double start, double end)
         {
             var chartData = new ChartData();
-            chartData.Name = $"{symbol}";
-            chartData.Min = stockList.Where(stock => stock.Price != null).Min(stock => (double)stock.Price);
-            chartData.Max = stockList.Where(stock => stock.Price != null).Max(stock => (double)stock.Price);
-            chartData.Day = stockList.Select(s => {
-                var currentDateTime = UnixTimeStampToDateTime(s.Date);
-                return $"{currentDateTime.Year}/{currentDateTime.Month}/{currentDateTime.Day}";
-                }).ToList();
-            chartData.Timestamp = stockList.Select(s => s.Date).ToList();
-            chartData.Price = stockList.Select(s => s.Price).ToList();
-            chartData.PriceAvg5Days = _movingAvgService.CalculateMovingAvarage(stockList, 5).Select(s => s.Price).ToList();
-            chartData.PriceAvg10Days = _movingAvgService.CalculateMovingAvarage(stockList, 10).Select(s => s.Price).ToList();
-            chartData.PriceAvg20Days = _movingAvgService.CalculateMovingAvarage(stockList, 20).Select(s => s.Price).ToList();
-            chartData.PriceAvg60Days = _movingAvgService.CalculateMovingAvarage(stockList, 60).Select(s => s.Price).ToList();
+            chartData = _fileHandler.ReadMaByFile($"{symbol} ma");
+            if(chartData.Name == null)
+            {
+                chartData.Name = $"{symbol}";
+                chartData.Min = stockList.Where(stock => stock.Price != null).Min(stock => (double)stock.Price);
+                chartData.Max = stockList.Where(stock => stock.Price != null).Max(stock => (double)stock.Price);
+                stockList.ForEach(s => {
+                    if (s.Date >= start && s.Date < end)
+                    {
+                        chartData.Timestamp.Add(s.Date);
+                        var currentDateTime = UnixTimeStampToDateTime(s.Date);
+                        var d = $"{currentDateTime.Year}/{currentDateTime.Month}/{currentDateTime.Day}";
+                        chartData.Day.Add(d);
+                        chartData.Price.Add(s.Price);
+                    }
+                });
+                for (var i = 1; i <= 256; i++)
+                {
+                    var maList = new List<double?>();
+                    _movingAvgService.CalculateMovingAvarage(stockList, i).ForEach(ma =>
+                    {
+                        if (ma.Date >= start && ma.Date < end)
+                        {
+                            maList.Add(ma.Price);
+                        }
+                    });
+                    chartData.MaList.Add(i, maList);
+                }
+
+                _fileHandler.OutputCsv(new List<ChartData> { chartData }, $"{symbol} ma");
+            }
 
             return chartData;
         }
 
-        public List<ChartData> GetMaFromCsv(string path)
+        public List<ChartData> CalculateMaFromCsv(string path)
         {
             var stockData = _fileHandler.ReadDataFromFile(path);
             var index = 0;
@@ -55,10 +73,6 @@ namespace Stock.Analysis._0607.Service
                 chartData.Name = $"Stock {index}";
                 chartData.Day = stockList.Select(s => s.Date.ToString()).ToList();
                 chartData.Price = stockList.Select(s => s.Price).ToList();
-                chartData.PriceAvg5Days = _movingAvgService.CalculateMovingAvarage(stockList, 5).Select(s => s.Price).ToList();
-                chartData.PriceAvg10Days = _movingAvgService.CalculateMovingAvarage(stockList, 10).Select(s => s.Price).ToList();
-                chartData.PriceAvg20Days = _movingAvgService.CalculateMovingAvarage(stockList, 20).Select(s => s.Price).ToList();
-                chartData.PriceAvg60Days = _movingAvgService.CalculateMovingAvarage(stockList, 60).Select(s => s.Price).ToList();
 
                 chartDataList.Add(chartData);
                 index++;
@@ -104,7 +118,7 @@ namespace Stock.Analysis._0607.Service
         }
 
 
-        public List<StockTransaction> GetMyTransactions(ChartData data, List<StockModel> stockList, TestCase testCase)
+        public List<StockTransaction> GetMyTransactions(ChartData data, List<StockModel> stockList, TestCase testCase, DateTime periodStart)
         {
             var myTransactions = new List<StockTransaction>();
             myTransactions.Add(new StockTransaction
@@ -120,72 +134,65 @@ namespace Stock.Analysis._0607.Service
             var index = 0;
             List<double?> buyShortMaValList;
             List<double?> buyLongMaValList;
-            buyShortMaValList = !data.GetMaValue(testCase.BuyShortTermMa).Any()
-                ? _movingAvgService.CalculateMovingAvarage(stockList, testCase.BuyShortTermMa).Select(stock => stock.Price).ToList()
-                : data.GetMaValue(testCase.BuyShortTermMa);
-
-            buyLongMaValList = !data.GetMaValue(testCase.BuyLongTermMa).Any()
-                ? _movingAvgService.CalculateMovingAvarage(stockList, testCase.BuyLongTermMa).Select(stock => stock.Price).ToList()
-                : data.GetMaValue(testCase.BuyLongTermMa);
+            buyShortMaValList = GetMaValue(testCase.BuyShortTermMa, data, stockList);
+            buyLongMaValList = GetMaValue(testCase.BuyLongTermMa, data, stockList);
             List<double?> sellShortMaValList;
             List<double?> sellLongMaValList;
-            sellShortMaValList = !data.GetMaValue(testCase.SellShortTermMa).Any()
-                ? _movingAvgService.CalculateMovingAvarage(stockList, testCase.SellShortTermMa).Select(stock => stock.Price).ToList()
-                : data.GetMaValue(testCase.SellShortTermMa);
-
-            sellLongMaValList = !data.GetMaValue(testCase.SellLongTermMa).Any()
-                ? _movingAvgService.CalculateMovingAvarage(stockList, testCase.SellLongTermMa).Select(stock => stock.Price).ToList()
-                : data.GetMaValue(testCase.SellLongTermMa);
+            sellShortMaValList = GetMaValue(testCase.SellShortTermMa, data, stockList);
+            sellLongMaValList = GetMaValue(testCase.SellLongTermMa, data, stockList);
 
             bool hasQty = false;
             var check = false;
             double maxPrice = 0;
             data.Timestamp.ForEach(timestamp =>
             {
-                var timeString = Utils.UnixTimeStampToDateTime(timestamp);
-                var price = data.Price[index] ?? 0;
-                price = Math.Round(price, 2, MidpointRounding.AwayFromZero);
-                var lastTrans = myTransactions.Any() ? myTransactions.LastOrDefault() : new StockTransaction();
-                if (buyShortMaValList.Any() && buyShortMaValList[index] != null && buyLongMaValList.Any() && buyLongMaValList[index] != null
-                    && _transTimingService.TimeToBuy(buyShortMaValList, buyLongMaValList, index, hasQty))
+                if (timestamp > Utils.ConvertToUnixTimestamp(periodStart))
                 {
-                    var volume = _calculateVolumeService.CalculateBuyingVolumeOddShares(lastTrans.Balance, price);
-                    myTransactions.Add(new StockTransaction
+                    var timeString = Utils.UnixTimeStampToDateTime(timestamp);
+                    var price = data.Price[index] ?? 0;
+                    price = Math.Round(price, 2, MidpointRounding.AwayFromZero);
+                    var lastTrans = myTransactions.Any() ? myTransactions.LastOrDefault() : new StockTransaction();
+                    if (buyShortMaValList.Any() && buyShortMaValList[index] != null && buyLongMaValList.Any() && buyLongMaValList[index] != null
+                        && _transTimingService.TimeToBuy(buyShortMaValList, buyLongMaValList, index, hasQty))
                     {
-                        TransTime = timestamp,
-                        TransTimeString = $"{timeString.Year}-{timeString.Month}-{timeString.Day}",
-                        TransPrice = price,
-                        TransType = TransactionType.Buy,
-                        TransVolume = volume,
-                        Balance = lastTrans.Balance - Math.Round(price * volume, MidpointRounding.ToZero),
-                        BuyShortMaPrice = buyShortMaValList[index],
-                        BuyLongMaPrice = buyLongMaValList[index],
-                        BuyShortMaPrice1DayBefore = buyShortMaValList[index-1],
-                        BuyLongMaPrice1DayBefore = buyLongMaValList[index-1],
-                    });
-                    hasQty = !hasQty;
-                }
-                // todo: 停損比例改為參數，從testcase丟進來
-                // todo: 注意現在是用哪一種時機點
-                else if (sellShortMaValList.Any() && sellShortMaValList[index] != null && sellLongMaValList.Any() && sellLongMaValList[index] != null
-                            && _transTimingService.TimeToSell(sellShortMaValList, sellLongMaValList, index, hasQty))
-                {
-                    var volume = _calculateVolumeService.CalculateSellingVolume(myTransactions.LastOrDefault().TransVolume);
-                    myTransactions.Add(new StockTransaction
+                        var volume = _calculateVolumeService.CalculateBuyingVolumeOddShares(lastTrans.Balance, price);
+                        myTransactions.Add(new StockTransaction
+                        {
+                            TransTime = timestamp,
+                            TransTimeString = $"{timeString.Year}-{timeString.Month}-{timeString.Day}",
+                            TransPrice = price,
+                            TransType = TransactionType.Buy,
+                            TransVolume = volume,
+                            Balance = lastTrans.Balance - Math.Round(price * volume, MidpointRounding.ToZero),
+                            BuyShortMaPrice = buyShortMaValList[index],
+                            BuyLongMaPrice = buyLongMaValList[index],
+                            BuyShortMaPrice1DayBefore = buyShortMaValList[index - 1],
+                            BuyLongMaPrice1DayBefore = buyLongMaValList[index - 1],
+                        });
+                        hasQty = !hasQty;
+                    }
+                    // todo: 停損比例改為參數，從testcase丟進來
+                    // todo: 注意現在是用哪一種時機點
+                    else if (sellShortMaValList.Any() && sellShortMaValList[index] != null && sellLongMaValList.Any() && sellLongMaValList[index] != null
+                                && _transTimingService.TimeToSell(sellShortMaValList, sellLongMaValList, index, hasQty))
                     {
-                        TransTime = timestamp,
-                        TransTimeString = $"{timeString.Year}-{timeString.Month}-{timeString.Day}",
-                        TransPrice = price,
-                        TransType = TransactionType.Sell,
-                        TransVolume = volume,
-                        Balance = lastTrans.Balance + Math.Round(price * volume, MidpointRounding.ToZero),
-                        SellShortMaPrice = sellShortMaValList[index],
-                        SellLongMaPrice = sellLongMaValList[index],
-                        SellShortMaPrice1DayBefore = sellShortMaValList[index - 1],
-                        SellLongMaPrice1DayBefore = sellLongMaValList[index - 1],
-                    });
-                    hasQty = !hasQty;
-                    maxPrice = 0;
+                        var volume = _calculateVolumeService.CalculateSellingVolume(myTransactions.LastOrDefault().TransVolume);
+                        myTransactions.Add(new StockTransaction
+                        {
+                            TransTime = timestamp,
+                            TransTimeString = $"{timeString.Year}-{timeString.Month}-{timeString.Day}",
+                            TransPrice = price,
+                            TransType = TransactionType.Sell,
+                            TransVolume = volume,
+                            Balance = lastTrans.Balance + Math.Round(price * volume, MidpointRounding.ToZero),
+                            SellShortMaPrice = sellShortMaValList[index],
+                            SellLongMaPrice = sellLongMaValList[index],
+                            SellShortMaPrice1DayBefore = sellShortMaValList[index - 1],
+                            SellLongMaPrice1DayBefore = sellLongMaValList[index - 1],
+                        });
+                        hasQty = !hasQty;
+                        maxPrice = 0;
+                    }
                 }
 
                 index++;
@@ -197,14 +204,21 @@ namespace Stock.Analysis._0607.Service
 
             return myTransactions;
         }
+
+        public List<double?> GetMaValue(int avgDay, ChartData data, List<StockModel> stockList)
+        {
+            return data.MaList.ContainsKey(avgDay)
+                ? data.MaList[avgDay]
+                : _movingAvgService.CalculateMovingAvarage(stockList, avgDay).Select(stock => stock.Price).ToList();
+        }
     }
 
     public interface IResearchOperationService
     {
-        List<ChartData> GetMaFromCsv(string path);
-        ChartData GetMaFromYahoo(string symbol, List<StockModel> stockList);
+        List<ChartData> CalculateMaFromCsv(string path);
+        ChartData GetMaFromYahoo(string symbol, List<StockModel> stockList, double start, double end);
         List<StockTransaction> ProfitSettlement(double currentStock, List<StockModel> stockList, TestCase testCase, List<StockTransaction> myTrans, double periodEnd);
         double GetEarningsResults(List<StockTransaction> myTrans);
-        List<StockTransaction> GetMyTransactions(ChartData data, List<StockModel> stockList, TestCase testCase);
+        List<StockTransaction> GetMyTransactions(ChartData data, List<StockModel> stockList, TestCase testCase, DateTime periodStart);
     }
 }

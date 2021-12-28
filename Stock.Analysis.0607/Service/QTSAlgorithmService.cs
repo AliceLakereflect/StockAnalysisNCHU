@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using CsvHelper;
 using Stock.Analysis._0607.Models;
 
 namespace Stock.Analysis._0607.Service
@@ -31,7 +32,7 @@ namespace Stock.Analysis._0607.Service
             };
         }
 
-        public StatusValue Fit(Queue<int> random, double funds, List<StockModel> stockList, ChartData data, int experiment)
+        public StatusValue Fit(Queue<int> random, double funds, List<StockModel> stockList, ChartData data, int experiment, CsvWriter csv, DateTime periodStart)
         {
             var iteration = 0;
             
@@ -39,7 +40,14 @@ namespace Stock.Analysis._0607.Service
             var gWorst = new StatusValue();
             var localBest = new StatusValue();
             var localWorst = new StatusValue();
+            #region debug
 
+            csv.WriteField($"exp:{experiment}");
+            csv.NextRecord();
+            csv.WriteField($"gen:{iteration}");
+            csv.NextRecord();
+
+            #endregion
             // initialize nodes
             List<Particle> particles = new List<Particle>();
             for (var i = 0; i < SEARCH_NODE_NUMBER; i++)
@@ -48,10 +56,22 @@ namespace Stock.Analysis._0607.Service
             }
 
             MetureX(random, particles, funds);
+
             var first = true;
+            var index = 0;
             particles.ForEach((p) =>
             {
-                p.CurrentFitness.Fitness = GetFitness(p.TestCase, stockList, data);
+                
+                p.CurrentFitness.Fitness = GetFitness(p.TestCase, stockList, data, periodStart);
+                #region debug
+
+                csv.WriteField($"P{index}");
+                DebugPrintParticle(csv, p.CurrentFitness);
+                csv.WriteField($"{p.CurrentFitness.Fitness / funds * 100}% ({p.CurrentFitness.Fitness}/{funds})");
+                csv.NextRecord();
+                index++;
+
+                #endregion
                 if (first)
                 {
                     gBest = p.CurrentFitness;
@@ -68,40 +88,166 @@ namespace Stock.Analysis._0607.Service
                 first = false;
             });
 
+            
+            
             // update probability
             GetLocalBestAndWorst(particles, ref localBest, ref localWorst);
+            #region debug
+
+            csv.WriteField("local best");
+            DebugPrintParticle(csv, localBest);
+            csv.NextRecord();
+            csv.WriteField("local worst");
+            DebugPrintParticle(csv, localWorst);
+            csv.NextRecord();
+
+            #endregion
             particles.ForEach((p) =>
             {
                 UpdateProbability(p, localBest, localWorst);
             });
 
+            #region debug
+
+            csv.WriteField("beta matrix");
+            DebugPrintBetaMatrix(csv, particles.FirstOrDefault());
+            csv.NextRecord();
+
+            #endregion
+
             while (iteration <= GENERATIONS)
             {
+                iteration++;
+                #region debug
+
+                csv.WriteField($"gen:{iteration}");
+                csv.NextRecord();
+
+                #endregion
                 MetureX(random, particles, funds);
+                index = 0;
                 particles.ForEach((p) =>
                 {
-                    p.CurrentFitness.Fitness = GetFitness(p.TestCase, stockList, data);
+                    
+                    p.CurrentFitness.Fitness = GetFitness(p.TestCase, stockList, data, periodStart);
                     UpdateGBestAndGWorst(p, ref gBest, ref gWorst, experiment, iteration);
+                    #region debug
+
+                    csv.WriteField($"P{index}");
+                    DebugPrintParticle(csv, p.CurrentFitness);
+                    csv.WriteField($"{p.CurrentFitness.Fitness/funds*100}% ({p.CurrentFitness.Fitness}/{funds})");
+                    csv.NextRecord();
+                    index++;
+
+                    #endregion
                 });
 
                 GetLocalBestAndWorst(particles, ref localBest, ref localWorst);
+                #region debug
+
+                csv.WriteField("local best");
+                DebugPrintParticle(csv, localBest);
+                csv.NextRecord();
+                csv.WriteField("local worst");
+                DebugPrintParticle(csv, localWorst);
+                csv.NextRecord();
+
+                #endregion
                 // update probability
                 particles.ForEach((p) =>
                 {
                     UpdateProbability(p, localBest, localWorst);
+                    
                 });
-                //Console.WriteLine($"Iteration: {iteration} " +
-                //    $"gbest: earn - {gBest.Fitness}, buy1 - {GetMaNumber(gBest.BuyMa1)}, buy2 - {GetMaNumber(gBest.BuyMa2)}," +
-                //    $" sell1 - {GetMaNumber(gBest.SellMa1)}, sell2 - {GetMaNumber(gBest.SellMa2)}");
+                #region debug
+
+                csv.WriteField("beta matrix");
+                DebugPrintBetaMatrix(csv, particles.FirstOrDefault());
+                csv.NextRecord();
+
+                #endregion
+
                 Console.WriteLine($"{iteration} - gbest:{gBest.Fitness} " +
                     $"buyMa1: {GetMaNumber(gBest.BuyMa1)} " +
                     $"buyMa2: {GetMaNumber(gBest.BuyMa2)} " +
                     $"sellMa1: {GetMaNumber(gBest.SellMa1)} " +
                     $"sellMa2:{GetMaNumber(gBest.SellMa2)}");
-                iteration++;
+
+
+                
             }
             
             return gBest;
+        }
+
+        private static void DebugPrintBetaMatrix(CsvWriter csv, Particle p)
+        {
+            var str = string.Empty;
+            p.BuyMa1Beta.ForEach(digit =>
+            {
+                str += $"{digit},";
+            });
+            csv.WriteField(str);
+            csv.WriteField("");
+
+            str = string.Empty;
+            p.BuyMa2Beta.ForEach(digit =>
+            {
+                str += $"{digit},";
+            });
+            csv.WriteField(str);
+            csv.WriteField("");
+
+            str = string.Empty;
+            p.SellMa1Beta.ForEach(digit =>
+            {
+                str += $"{digit},";
+            });
+            csv.WriteField(str);
+            csv.WriteField("");
+
+            str = string.Empty;
+            p.SellMa2Beta.ForEach(digit =>
+            {
+                str += $"{digit},";
+            });
+            csv.WriteField(str);
+            csv.WriteField("");
+        }
+
+        private void DebugPrintParticle(CsvWriter csv, StatusValue current)
+        {
+            var str = string.Empty;
+            current.BuyMa1.ForEach(digit =>
+            {
+                str += $"{digit}";
+            });
+            csv.WriteField($"{GetMaNumber(current.BuyMa1)} ({str})");
+            csv.WriteField("");
+
+            str = string.Empty;
+            current.BuyMa2.ForEach(digit =>
+            {
+                str += $"{digit}";
+            });
+            csv.WriteField($"{GetMaNumber(current.BuyMa2)} ({str})");
+            csv.WriteField("");
+
+            str = string.Empty;
+            current.SellMa1.ForEach(digit =>
+            {
+                str += $"{digit}";
+            });
+            csv.WriteField($"{GetMaNumber(current.SellMa1)} ({str})");
+            csv.WriteField("");
+
+            str = string.Empty;
+            current.SellMa2.ForEach(digit =>
+            {
+                str += $"{digit}";
+            });
+            csv.WriteField($"{GetMaNumber(current.SellMa2)} ({str})");
+            csv.WriteField("");
         }
 
         public void UpdateGBestAndGWorst(Particle p, ref StatusValue gBest, ref StatusValue gWorst, int experiment, int iteration)
@@ -185,9 +331,9 @@ namespace Stock.Analysis._0607.Service
             }
         }
 
-        public int GetMaNumber(List<int> metrix)
+        public int GetMaNumber(List<int> metrix) 
         {
-            return metrix[0] * 1 + metrix[1] * 2 + metrix[2] * 4 + metrix[3] * 8 + metrix[4] * 16 + metrix[5] * 32 + metrix[6] * 64 + metrix[7] * 127;
+            return 1 + metrix[7] * 1 + metrix[6] * 2 + metrix[5] * 4 + metrix[4] * 8 + metrix[3] * 16 + metrix[2] * 32 + metrix[1] * 64 + metrix[0] * 128;
         }
 
         public void MetureX(Queue<int> random, List<Particle> particles, double funds)
@@ -199,16 +345,19 @@ namespace Stock.Analysis._0607.Service
                 {
                     p.CurrentFitness.BuyMa1.Add(x >= random.Dequeue() / RANDOM_MAX ? 1 : 0);
                 });
+
                 p.CurrentFitness.BuyMa2 = new List<int>();
                 p.BuyMa2Beta.ForEach((x) =>
                 {
                     p.CurrentFitness.BuyMa2.Add(x >= random.Dequeue() / RANDOM_MAX ? 1 : 0);
                 });
+
                 p.CurrentFitness.SellMa1 = new List<int>();
                 p.SellMa1Beta.ForEach((x) =>
                 {
                     p.CurrentFitness.SellMa1.Add(x >= random.Dequeue() / RANDOM_MAX ? 1 : 0);
                 });
+
                 p.CurrentFitness.SellMa2 = new List<int>();
                 p.SellMa2Beta.ForEach((x) =>
                 {
@@ -228,24 +377,25 @@ namespace Stock.Analysis._0607.Service
                     SellLongTermMa = sellMa2,
                 };
             });
+
         }
 
-        public double GetFitness(TestCase currentTestCase, List<StockModel> stockList, ChartData data)
+        public double GetFitness(TestCase currentTestCase, List<StockModel> stockList, ChartData data, DateTime periodStart)
         {
-            var transactions = _researchOperationService.GetMyTransactions(data, stockList, currentTestCase);
+            var transactions = _researchOperationService.GetMyTransactions(data, stockList, currentTestCase, periodStart);
             var earns = _researchOperationService.GetEarningsResults(transactions);
             return earns;
         }
     }
     public interface IAlgorithmService
     { 
-        StatusValue Fit(Queue<int> random, double funds, List<StockModel> stockList, ChartData data, int experiment);
+        StatusValue Fit(Queue<int> random, double funds, List<StockModel> stockList, ChartData data, int experiment, CsvWriter csv, DateTime periodStart);
         void UpdateGBestAndGWorst(Particle p, ref StatusValue gBest, ref StatusValue gWorst, int experiment, int iteration);
         void GetLocalBestAndWorst(List<Particle> particles, ref StatusValue localBest, ref StatusValue localWorst);
         void UpdateProbability(Particle p, StatusValue localBest, StatusValue localWorst);
         int GetMaNumber(List<int> metrix);
         void MetureX(Queue<int> random, List<Particle> particles, double funds);
-        double GetFitness(TestCase currentTestCase, List<StockModel> stockList, ChartData data);
+        double GetFitness(TestCase currentTestCase, List<StockModel> stockList, ChartData data, DateTime periodStart);
         AlgorithmConst GetConst();
     }
 }

@@ -171,6 +171,7 @@ namespace Stock.Analysis.Tests.Service
                 SellShortTermMa = 5,
                 SellLongTermMa = 20
             };
+            var periodStart = new DateTime(2020, 1, 1, 0, 0, 0);
             var periodEnd = new DateTime(2021, 6, 30, 0, 0, 0);
             var dataList = _historyRepository.GetRealData1yOf2603();
             var chartData = new ChartData
@@ -181,9 +182,9 @@ namespace Stock.Analysis.Tests.Service
 
             chartData.Price = dataList.Select(s => s.Price).ToList();
             chartData.Timestamp = dataList.Select(s => s.Date).ToList();
-            chartData.PriceAvg5Days = _movingAvarageService.CalculateMovingAvarage(dataList, 5).Select(s => s.Price).ToList();
-            chartData.PriceAvg20Days = _movingAvarageService.CalculateMovingAvarage(dataList, 20).Select(s => s.Price).ToList();
-            var result = _qtsService.GetFitness(testCase, dataList, chartData);
+            chartData.MaList.Add(5, _movingAvarageService.CalculateMovingAvarage(dataList, 5).Select(s => s.Price).ToList());
+            chartData.MaList.Add(20, _movingAvarageService.CalculateMovingAvarage(dataList, 20).Select(s => s.Price).ToList());
+            var result = _qtsService.GetFitness(testCase, dataList, chartData, periodStart);
 
             Assert.Equal(1297975, result);
         }
@@ -193,9 +194,9 @@ namespace Stock.Analysis.Tests.Service
             public static IEnumerable<object[]> MaMetrix =>
             new List<object[]>
             {
-                new object[] { new List<int> { 1, 0, 0, 0, 0, 0, 0, 0 },  1 },
-                new object[] { new List<int> { 0, 0, 0, 0, 0, 0, 0, 1 },  127 },
-                new object[] { new List<int> { 0, 0, 1, 0, 0, 0, 0, 1 },  131 }
+                new object[] { new List<int> { 1, 0, 0, 0, 0, 0, 0, 0 },  129 },
+                new object[] { new List<int> { 0, 0, 0, 0, 0, 0, 0, 1 },  2 },
+                new object[] { new List<int> { 0, 0, 1, 0, 0, 0, 0, 1 },  34 }
             };
 
             public static IEnumerable<object[]> MeatureX =>

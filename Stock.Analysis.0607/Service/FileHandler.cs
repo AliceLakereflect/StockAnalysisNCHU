@@ -52,35 +52,27 @@ namespace Stock.Analysis._0607.Service
 
         public void OutputCsv(List<ChartData> chartDataList, string fileName)
         {
-            var path = Path.Combine(Environment.CurrentDirectory, $"Output/{fileName}.csv");
+            var path = Path.Combine(Environment.CurrentDirectory, $"Data/{fileName}.csv");
             using (var writer = new StreamWriter(path))
-            using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
+            using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture, false))
             {
                 foreach (var chartData in chartDataList)
                 {
-                    csv.WriteField("Stock Name");
+                    csv.WriteRecord(chartData);
                     csv.NextRecord();
-                    csv.WriteField(chartData.Name);
+                    chartData.Timestamp.ForEach(t => csv.WriteField(t));
                     csv.NextRecord();
-
-                    var index = 0;
-                    csv.WriteField("Date");
-                    csv.WriteField("Price");
-                    csv.WriteField("5MA");
-                    csv.WriteField("10MA");
-                    csv.WriteField("20MA");
-                    csv.WriteField("60MA");
+                    chartData.Day.ForEach(d => csv.WriteField(d));
                     csv.NextRecord();
-                    foreach (var data in chartData.Timestamp) {
-                        csv.WriteField(chartData.Day[index]);
-                        csv.WriteField(chartData.Price.ElementAt(index));
-                        csv.WriteField(chartData.PriceAvg5Days.ElementAt(index));
-                        csv.WriteField(chartData.PriceAvg10Days.ElementAt(index));
-                        csv.WriteField(chartData.PriceAvg20Days.ElementAt(index));
-                        csv.WriteField(chartData.PriceAvg60Days.ElementAt(index));
+                    chartData.Price.ForEach(p => csv.WriteField(p));
+                    csv.NextRecord();
+                    foreach (var (maNum, maList) in chartData.MaList)
+                    {
+                        csv.WriteField(maNum);
+                        maList.ForEach(ma => csv.WriteField(ma));
                         csv.NextRecord();
-                        index++;
                     }
+
                     csv.NextRecord();
                 }
             }
@@ -295,7 +287,58 @@ namespace Stock.Analysis._0607.Service
 
             return result;
         }
+        public ChartData ReadMaByFile(string fileName)
+        {
+            var path = Path.Combine(Environment.CurrentDirectory, $"Data/{fileName}.csv");
+            var chartData = new ChartData();
+            try
+            {
+                using (var reader = new StreamReader(path))
+                using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
+                {
+                    csv.Read();
+                    chartData.Name = csv.GetField(0);
+                    chartData.Min = double.Parse(csv.GetField(1));
+                    chartData.Max = double.Parse(csv.GetField(2));
+                    csv.Read();
+                    for (int i = 0; csv.TryGetField<double>(i, out var t); i++)
+                    {
+                        chartData.Timestamp.Add(t);
+                    }
+                    csv.Read();
+                    for (int i = 0; csv.TryGetField<string>(i, out var d); i++)
+                    {
+                        chartData.Day.Add(d);
+                    }
+                    csv.Read();
 
+                    for (int i = 0; csv.TryGetField<double?>(i, out var p); i++)
+                    {
+                        chartData.Price.Add(p);
+                    }
+                    while (csv.Read())
+                    {
+                        var maNum = int.Parse(csv.GetField(0));
+                        var maList = new List<double?>();
+                        var first = true;
+                        for (int i = 0; csv.TryGetField<double?>(i, out var ma); i++)
+                        {
+                            if(!first)
+                                maList.Add(ma);
+
+                            first = false;
+                        }
+                        chartData.MaList.Add(maNum, maList);
+                    }
+                }
+
+            }
+            catch (FileNotFoundException e)
+            {
+                return chartData;
+            }
+            return chartData;
+        }
         public Queue<int> Readcsv(string fileName)
         {
             var result = new Queue<int>();
@@ -303,6 +346,7 @@ namespace Stock.Analysis._0607.Service
             using (var reader = new StreamReader(path))
             using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
             {
+                result.Enqueue(1158);
                 while (csv.Read())
                 {
                     var random = csv.GetRecord<int>();
@@ -321,6 +365,7 @@ namespace Stock.Analysis._0607.Service
         void OutputTransaction(List<StockTransList> MyTransList, string fileName);
         void OutputEarn(List<StockTransList> MyTransList, string fileName);
         void OutputQTSResult(AlgorithmConst algorithmConst, double funds, StatusValue gBest, List<StockTransaction> transactions, string fileName);
+        ChartData ReadMaByFile(string fileName);
         Queue<int> Readcsv(string fileName);
     }
 }

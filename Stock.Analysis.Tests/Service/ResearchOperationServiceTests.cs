@@ -17,6 +17,7 @@ namespace Stock.Analysis.Tests.Service
         ChartData _historicalData;
         List<StockModel> _stockList = new List<StockModel>();
         TestCase _testCase = new TestCase { Funds = 100000, BuyShortTermMa = 5, BuyLongTermMa = 20, SellShortTermMa = 5, SellLongTermMa = 20 };
+        DateTime _periodStart = new DateTime(2020, 1, 1, 0, 0, 0);
 
         public ResearchOperationServiceTests()
         {
@@ -29,7 +30,8 @@ namespace Stock.Analysis.Tests.Service
         {
             var testCase = _testCase.DeepClone();
             testCase.Funds = 100;
-            var transactionsList = _researchOperationService.GetMyTransactions(_historicalData, _stockList, testCase);
+            
+            var transactionsList = _researchOperationService.GetMyTransactions(_historicalData, _stockList, testCase, _periodStart);
             Assert.Single(transactionsList);
             Assert.All(transactionsList, trans=> {
                 Assert.Equal(TransactionType.AddFunds, trans.TransType);
@@ -43,7 +45,7 @@ namespace Stock.Analysis.Tests.Service
             var stockList = _historyRepository.GetConcussiveStockList();
             var testCase = _testCase.DeepClone();
             testCase.Funds = 18000;
-            var transactionsList = _researchOperationService.GetMyTransactions(historicalData, stockList, testCase);
+            var transactionsList = _researchOperationService.GetMyTransactions(historicalData, stockList, testCase, _periodStart);
             Assert.Equal(3, transactionsList.Count);
             Assert.Equal(18, transactionsList.Find(t=>t.TransType == TransactionType.Buy).TransPrice);
             Assert.Equal(1000, transactionsList.Find(t => t.TransType == TransactionType.Buy).TransVolume);
@@ -63,10 +65,10 @@ namespace Stock.Analysis.Tests.Service
                 Price = new List<double?>()
             };
             var stockList = new List<StockModel>();
-            var dayIndex = 0;
+            var dayIndex = -2;
             for (var i = 90; i > 0; i--)
             {
-                var elapsedSpan = new TimeSpan(_dateTime.AddDays(dayIndex).Ticks);
+                var elapsedSpan = new TimeSpan(_periodStart.AddDays(dayIndex).Ticks);
                 stockList.Add(new StockModel
                 {
                     Date = elapsedSpan.TotalSeconds,
@@ -77,7 +79,7 @@ namespace Stock.Analysis.Tests.Service
             }
             for (var i = 0; i < 90; i++)
             {
-                var elapsedSpan = new TimeSpan(_dateTime.AddDays(dayIndex).Ticks);
+                var elapsedSpan = new TimeSpan(_periodStart.AddDays(dayIndex).Ticks);
                 stockList.Add(new StockModel
                 {
                     Date = elapsedSpan.TotalSeconds,
@@ -88,7 +90,7 @@ namespace Stock.Analysis.Tests.Service
             }
             for (var i = 90; i > 0; i--)
             {
-                var elapsedSpan = new TimeSpan(_dateTime.AddDays(dayIndex).Ticks);
+                var elapsedSpan = new TimeSpan(_periodStart.AddDays(dayIndex).Ticks);
                 stockList.Add(new StockModel
                 {
                     Date = elapsedSpan.TotalSeconds,
@@ -98,11 +100,11 @@ namespace Stock.Analysis.Tests.Service
                 dayIndex++;
             }
             historicalData.Timestamp = stockList.Select(s => s.Date).ToList();
-            historicalData.PriceAvg5Days = _movingAvarageService.CalculateMovingAvarage(stockList, 5).Select(s => s.Price).ToList();
-            historicalData.PriceAvg20Days = _movingAvarageService.CalculateMovingAvarage(stockList, 20).Select(s => s.Price).ToList();
+            historicalData.MaList.Add(5, _movingAvarageService.CalculateMovingAvarage(stockList, 5).Select(s => s.Price).ToList());
+            historicalData.MaList.Add(20, _movingAvarageService.CalculateMovingAvarage(stockList, 20).Select(s => s.Price).ToList());
             var testCase = _testCase.DeepClone();
             testCase.Funds = funds;
-            var transactionsList = _researchOperationService.GetMyTransactions(historicalData, stockList, testCase);
+            var transactionsList = _researchOperationService.GetMyTransactions(historicalData, stockList, testCase, _periodStart);
             Assert.Equal(3, transactionsList.Count);
             Assert.Equal(volumns, transactionsList.Find(t => t.TransType == TransactionType.Buy).TransVolume);
             Assert.Equal(volumns, transactionsList.Find(t => t.TransType == TransactionType.Sell).TransVolume);
@@ -112,22 +114,23 @@ namespace Stock.Analysis.Tests.Service
         public void GetMaFromYahooTest()
         {
             var symbol = "AAPL";
-            var chartdata = _researchOperationService.GetMaFromYahoo(symbol, _stockList);
+            var chartdata = _researchOperationService.GetMaFromYahoo(symbol, _stockList, 1.0, 1.0);
             Assert.Equal(symbol, chartdata.Name);
 
             var index = 0;
             var limit = 59;
             var firstExpected = 39.5;
-            chartdata.PriceAvg60Days.ForEach(stock =>
+            var ma60 = chartdata.MaList[60];
+            ma60.ForEach(maValue =>
             {
                 if (index < limit)
                 {
-                    Assert.Null(chartdata.PriceAvg60Days[index]);
+                    Assert.Null(maValue);
                 }
                 else
                 {
                     var expected = firstExpected - limit + Convert.ToDouble(index);
-                    Assert.Equal(expected, chartdata.PriceAvg60Days[index]);
+                    Assert.Equal(expected, maValue);
                 }
 
                 index++;
@@ -209,10 +212,10 @@ namespace Stock.Analysis.Tests.Service
 
             chartData.Price = dataList.Select(s => s.Price).ToList();
             chartData.Timestamp = dataList.Select(s => s.Date).ToList();
-            chartData.PriceAvg5Days = _movingAvarageService.CalculateMovingAvarage(dataList, 5).Select(s => s.Price).ToList();
-            chartData.PriceAvg20Days = _movingAvarageService.CalculateMovingAvarage(dataList, 20).Select(s => s.Price).ToList();
+            chartData.MaList.Add(5, _movingAvarageService.CalculateMovingAvarage(dataList, 5).Select(s => s.Price).ToList());
+            chartData.MaList.Add(20, _movingAvarageService.CalculateMovingAvarage(dataList, 20).Select(s => s.Price).ToList());
 
-            var result = _researchOperationService.GetMyTransactions(chartData, dataList, testCase);
+            var result = _researchOperationService.GetMyTransactions(chartData, dataList, testCase, _periodStart);
             Assert.Equal(15, result.Count);
             var expectedBuyTime = new List<string>{ "2020-4-10", "2020-7-7", "2020-7-22", "2020-8-3", "2020-10-8", "2021-2-17", "2021-5-25" };
             var index = 0;
@@ -241,6 +244,29 @@ namespace Stock.Analysis.Tests.Service
             Assert.Equal(1297975, earn);
             var lastTrans = result.LastOrDefault();
             Assert.Equal(197, lastTrans.TransPrice);
+        }
+
+        [Fact]
+        public void DebugTransaction()
+        {
+
+            IDataService _dataService = new DataService();
+            var testCase = new TestCase
+            {
+                Funds = 10000000,
+                BuyShortTermMa = 187,
+                BuyLongTermMa = 100,
+                SellShortTermMa = 24,
+                SellLongTermMa = 255
+            };
+
+            var periodStart = new DateTime(2020, 1, 1, 0, 0, 0);
+            var periodEnd = new DateTime(2021, 6, 30, 0, 0, 0);
+            var dataList = _historyRepository.GetRealData1yOf2603();
+
+            var maStockList = _dataService.GetPeriodDataFromYahooApi("2603.TW", new DateTime(2000, 1, 1, 0, 0, 0), periodEnd.AddDays(1));
+            ChartData chartData = _researchOperationService.GetMaFromYahoo("2603.TW", maStockList, Utils.ConvertToUnixTimestamp(periodStart), Utils.ConvertToUnixTimestamp(periodEnd.AddDays(1)));
+            var result = _researchOperationService.GetMyTransactions(chartData, dataList, testCase, periodStart);
         }
     }
 }
