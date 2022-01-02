@@ -12,7 +12,7 @@ namespace Stock.Analysis._0607.Service
         // QTS paremeters
         const double DELTA = 0.003;
         const int GENERATIONS = 10000;
-        const int SEARCH_NODE_NUMBER = 3;
+        const int SEARCH_NODE_NUMBER = 10;
         const int DIGIT_NUMBER = 8;
         const double RANDOM_MAX = 32767.0;
 
@@ -115,7 +115,7 @@ namespace Stock.Analysis._0607.Service
 
             #endregion
 
-            while (iteration <= GENERATIONS)
+            while (iteration < GENERATIONS - 1)
             {
                 iteration++;
                 #region debug
@@ -167,11 +167,11 @@ namespace Stock.Analysis._0607.Service
 
                 #endregion
 
-                Console.WriteLine($"{iteration} - gbest:{gBest.Fitness} " +
-                    $"buyMa1: {GetMaNumber(gBest.BuyMa1)} " +
-                    $"buyMa2: {GetMaNumber(gBest.BuyMa2)} " +
-                    $"sellMa1: {GetMaNumber(gBest.SellMa1)} " +
-                    $"sellMa2:{GetMaNumber(gBest.SellMa2)}");
+                //Console.WriteLine($"{iteration} - gbest:{gBest.Fitness} " +
+                //    $"buyMa1: {GetMaNumber(gBest.BuyMa1)} " +
+                //    $"buyMa2: {GetMaNumber(gBest.BuyMa2)} " +
+                //    $"sellMa1: {GetMaNumber(gBest.SellMa1)} " +
+                //    $"sellMa2:{GetMaNumber(gBest.SellMa2)}");
 
 
                 
@@ -293,40 +293,40 @@ namespace Stock.Analysis._0607.Service
             for (var index = 0; index < DIGIT_NUMBER; index++)
             {
                 // BuyMa1
-                if (localBest.BuyMa2[index] > localWorst.BuyMa1[index])
+                if (localBest.BuyMa1[index] > localWorst.BuyMa1[index])
                 {
-                    p.BuyMa1Beta[index] += DELTA;
+                    p.BuyMa1Beta[index] = Math.Round(p.BuyMa1Beta[index] + DELTA, 3);
                 }
                 else if (localBest.BuyMa1[index] < localWorst.BuyMa1[index])
                 {
-                    p.BuyMa1Beta[index] -= DELTA;
+                    p.BuyMa1Beta[index] = Math.Round(p.BuyMa1Beta[index] - DELTA, 3);
                 }
                 // BuyMa2
                 if (localBest.BuyMa2[index] > localWorst.BuyMa2[index])
                 {
-                    p.BuyMa2Beta[index] += DELTA;
+                    p.BuyMa2Beta[index] = Math.Round(p.BuyMa2Beta[index] + DELTA, 3);
                 }
                 else if (localBest.BuyMa2[index] < localWorst.BuyMa2[index])
                 {
-                    p.BuyMa2Beta[index] -= DELTA;
+                    p.BuyMa2Beta[index] = Math.Round(p.BuyMa2Beta[index] - DELTA, 3);
                 }
                 // SellMa1
                 if (localBest.SellMa1[index] > localWorst.SellMa1[index])
                 {
-                    p.SellMa1Beta[index] += DELTA;
+                    p.SellMa1Beta[index] = Math.Round(p.SellMa1Beta[index] + DELTA, 3);
                 }
                 else if (localBest.SellMa1[index] < localWorst.SellMa1[index])
                 {
-                    p.SellMa1Beta[index] -= DELTA;
+                    p.SellMa1Beta[index] = Math.Round(p.SellMa1Beta[index] - DELTA, 3);
                 }
                 // SellMa2
                 if (localBest.SellMa2[index] > localWorst.SellMa2[index])
                 {
-                    p.SellMa2Beta[index] += DELTA;
+                    p.SellMa2Beta[index] = Math.Round(p.SellMa2Beta[index] + DELTA, 3);
                 }
                 else if (localBest.SellMa2[index] < localWorst.SellMa2[index])
                 {
-                    p.SellMa2Beta[index] -= DELTA;
+                    p.SellMa2Beta[index] = Math.Round(p.SellMa2Beta[index] - DELTA, 3);
                 }
             }
         }

@@ -68,5 +68,15 @@ namespace Stock.Analysis.Tests.Service
             Assert.NotEmpty(file);
         }
 
+        [Fact]
+        public void ReadRandom400wTest()
+        {
+            var result = _fileHandler.Readcsv("Data/srand343");
+            Assert.NotNull(result);
+            //Assert.Equal(160000000, result.Count);
+            Assert.Equal(1158,result.Dequeue());
+            Assert.Equal(24406,result.Dequeue());
+        }
+
     }
 }

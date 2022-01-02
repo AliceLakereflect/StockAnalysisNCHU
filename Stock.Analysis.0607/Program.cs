@@ -18,7 +18,7 @@ namespace Stock.Analysis._0607
         private static IDataService _dataService = new DataService();
         const string SYMBOL = "2603.TW";
         const double FUNDS = 10000000;
-        const int EXPERIMENT_NUMBER = 1;
+        const int EXPERIMENT_NUMBER = 50;
 
         static void Main(string[] args)
         {
@@ -38,17 +38,17 @@ namespace Stock.Analysis._0607
             var myTransList = new List<StockTransList>();
             StatusValue bestGbest = new StatusValue();
             //var random = new Random(343);
-            var random = _fileHandler.Readcsv("srand343");
+            var random = _fileHandler.Readcsv("Data/srand343");
             for (var e = 0; e < EXPERIMENT_NUMBER; e++)
             {
-                var path = Path.Combine(Environment.CurrentDirectory, $"Output/debug G best transaction - C random.csv");
+                var path = Path.Combine(Environment.CurrentDirectory, $"Output/50 Experements/debug G best transaction exp: {e} - C random.csv");
                 StatusValue gBest = new StatusValue();
                 using (var writer = new StreamWriter(path))
                 using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture, false))
                 {
                     gBest = _qtsAlgorithmService.Fit(random, FUNDS, stockList, data, e, csv, periodStart);
                 }
-                Console.WriteLine(gBest.Fitness);
+                Console.WriteLine($"{e}: {gBest.Fitness}");
                 if(bestGbest.Fitness < gBest.Fitness)
                 {
                     bestGbest = gBest.DeepClone();
@@ -83,6 +83,7 @@ namespace Stock.Analysis._0607
                 };
                 var t = _researchOperationService.GetMyTransactions(data, stockList, testCase, periodStart);
                 var a = _qtsAlgorithmService.GetConst();
+                a.EXPERIMENT_NUMBER = EXPERIMENT_NUMBER;
                 _fileHandler.OutputQTSResult(a, FUNDS, bestGbest, t, $"G best transaction - C random - 2020-1-2 ~ 2021-6-30");
             }
         }

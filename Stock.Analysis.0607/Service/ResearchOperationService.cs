@@ -26,7 +26,7 @@ namespace Stock.Analysis._0607.Service
         public ChartData GetMaFromYahoo(string symbol, List<StockModel> stockList, double start, double end)
         {
             var chartData = new ChartData();
-            chartData = _fileHandler.ReadMaByFile($"{symbol} ma");
+            //chartData = _fileHandler.ReadMaByFile($"{symbol} ma");
             if(chartData.Name == null)
             {
                 chartData.Name = $"{symbol}";
@@ -86,7 +86,7 @@ namespace Stock.Analysis._0607.Service
             if (hasQty)
             {
                 var timeString = Utils.UnixTimeStampToDateTime(periodEnd);
-                var price = Math.Round(currentStock, 2, MidpointRounding.AwayFromZero);
+                var price = Math.Round(currentStock, 10, MidpointRounding.AwayFromZero);
                 var sellShortMaValList = _movingAvgService.CalculateMovingAvarage(stockList, testCase.SellShortTermMa).Select(stock => stock.Price).TakeLast(2).ToList();              
                 var sellLongMaValList = _movingAvgService.CalculateMovingAvarage(stockList, testCase.SellLongTermMa).Select(stock => stock.Price).TakeLast(2).ToList();
                 myTrans.Add(new StockTransaction
@@ -96,7 +96,7 @@ namespace Stock.Analysis._0607.Service
                     TransPrice = price,
                     TransType = TransactionType.Sell,
                     TransVolume = myTrans.Last().TransVolume,
-                    Balance = myTrans.Last().Balance + Math.Round(currentStock * myTrans.Last().TransVolume, MidpointRounding.ToZero),
+                    Balance = myTrans.Last().Balance + Math.Round(currentStock * myTrans.Last().TransVolume, 10, MidpointRounding.ToZero),
                     SellShortMaPrice = sellShortMaValList.LastOrDefault() ?? 0,
                     SellLongMaPrice = sellLongMaValList.LastOrDefault() ?? 0,
                     SellShortMaPrice1DayBefore = sellShortMaValList.FirstOrDefault() ?? 0,
@@ -110,9 +110,9 @@ namespace Stock.Analysis._0607.Service
         public double GetEarningsResults(List<StockTransaction> myTrans)
         {
             var buy = myTrans.Where(trans => trans.TransType == TransactionType.Buy)
-                .Sum(trans => Math.Round(trans.TransPrice * trans.TransVolume, MidpointRounding.ToZero));
+                .Sum(trans => Math.Round(trans.TransPrice * trans.TransVolume, 10, MidpointRounding.ToZero));
             var sell = myTrans.Where(trans => trans.TransType == TransactionType.Sell)
-                .Sum(trans => Math.Round(trans.TransPrice * trans.TransVolume, MidpointRounding.ToZero));
+                .Sum(trans => Math.Round(trans.TransPrice * trans.TransVolume, 10, MidpointRounding.ToZero));
             var earn = sell - buy;
             return earn;
         }
@@ -150,7 +150,7 @@ namespace Stock.Analysis._0607.Service
                 {
                     var timeString = Utils.UnixTimeStampToDateTime(timestamp);
                     var price = data.Price[index] ?? 0;
-                    price = Math.Round(price, 2, MidpointRounding.AwayFromZero);
+                    price = Math.Round(price, 10, MidpointRounding.AwayFromZero);
                     var lastTrans = myTransactions.Any() ? myTransactions.LastOrDefault() : new StockTransaction();
                     if (buyShortMaValList.Any() && buyShortMaValList[index] != null && buyLongMaValList.Any() && buyLongMaValList[index] != null
                         && _transTimingService.TimeToBuy(buyShortMaValList, buyLongMaValList, index, hasQty))
@@ -163,7 +163,7 @@ namespace Stock.Analysis._0607.Service
                             TransPrice = price,
                             TransType = TransactionType.Buy,
                             TransVolume = volume,
-                            Balance = lastTrans.Balance - Math.Round(price * volume, MidpointRounding.ToZero),
+                            Balance = lastTrans.Balance - Math.Round(price * volume, 10, MidpointRounding.ToZero),
                             BuyShortMaPrice = buyShortMaValList[index],
                             BuyLongMaPrice = buyLongMaValList[index],
                             BuyShortMaPrice1DayBefore = buyShortMaValList[index - 1],
@@ -184,7 +184,7 @@ namespace Stock.Analysis._0607.Service
                             TransPrice = price,
                             TransType = TransactionType.Sell,
                             TransVolume = volume,
-                            Balance = lastTrans.Balance + Math.Round(price * volume, MidpointRounding.ToZero),
+                            Balance = lastTrans.Balance + Math.Round(price * volume, 10, MidpointRounding.ToZero),
                             SellShortMaPrice = sellShortMaValList[index],
                             SellLongMaPrice = sellLongMaValList[index],
                             SellShortMaPrice1DayBefore = sellShortMaValList[index - 1],

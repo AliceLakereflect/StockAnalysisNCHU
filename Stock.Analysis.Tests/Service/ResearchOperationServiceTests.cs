@@ -254,10 +254,10 @@ namespace Stock.Analysis.Tests.Service
             var testCase = new TestCase
             {
                 Funds = 10000000,
-                BuyShortTermMa = 187,
-                BuyLongTermMa = 100,
-                SellShortTermMa = 24,
-                SellLongTermMa = 255
+                BuyShortTermMa = 213,
+                BuyLongTermMa = 214,
+                SellShortTermMa = 8,
+                SellLongTermMa = 214
             };
 
             var periodStart = new DateTime(2020, 1, 1, 0, 0, 0);
@@ -265,8 +265,10 @@ namespace Stock.Analysis.Tests.Service
             var dataList = _historyRepository.GetRealData1yOf2603();
 
             var maStockList = _dataService.GetPeriodDataFromYahooApi("2603.TW", new DateTime(2000, 1, 1, 0, 0, 0), periodEnd.AddDays(1));
-            ChartData chartData = _researchOperationService.GetMaFromYahoo("2603.TW", maStockList, Utils.ConvertToUnixTimestamp(periodStart), Utils.ConvertToUnixTimestamp(periodEnd.AddDays(1)));
+            ChartData chartData = _researchOperationService.GetMaFromYahoo("2603.TW", maStockList, Utils.ConvertToUnixTimestamp(periodStart.AddDays(-2)), Utils.ConvertToUnixTimestamp(periodEnd.AddDays(1)));
             var result = _researchOperationService.GetMyTransactions(chartData, dataList, testCase, periodStart);
+            var fileService = new FileHandler();
+            fileService.OutputTransaction(new List<StockTransList> { new StockTransList { Transactions = result } }, "142_149_46_136");
         }
     }
 }

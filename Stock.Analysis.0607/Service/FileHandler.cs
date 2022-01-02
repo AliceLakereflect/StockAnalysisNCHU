@@ -11,6 +11,7 @@ namespace Stock.Analysis._0607.Service
 {
     public class FileHandler: IFileHandler
     {
+        private static IAlgorithmService _qtsAlgorithmService = new QTSAlgorithmService();
         public FileHandler()
         {
         }
@@ -154,16 +155,16 @@ namespace Stock.Analysis._0607.Service
 
                 csv.NextRecord();
                 csv.WriteField("Buy1");
-                csv.WriteField(GetMaNumber(gBest.BuyMa1));
+                csv.WriteField(_qtsAlgorithmService.GetMaNumber(gBest.BuyMa1));
                 csv.NextRecord();
                 csv.WriteField("Buy2");
-                csv.WriteField(GetMaNumber(gBest.BuyMa2));
+                csv.WriteField(_qtsAlgorithmService.GetMaNumber(gBest.BuyMa2));
                 csv.NextRecord();
                 csv.WriteField("Sell1");
-                csv.WriteField(GetMaNumber(gBest.SellMa1));
+                csv.WriteField(_qtsAlgorithmService.GetMaNumber(gBest.SellMa1));
                 csv.NextRecord();
                 csv.WriteField("Sell2");
-                csv.WriteField(GetMaNumber(gBest.SellMa2));
+                csv.WriteField(_qtsAlgorithmService.GetMaNumber(gBest.SellMa2));
                 csv.NextRecord();
                 csv.WriteField("Number of Trades");
                 csv.WriteField((transactions.Count-1)/2);
@@ -229,10 +230,6 @@ namespace Stock.Analysis._0607.Service
             }
         }
 
-        private int GetMaNumber(List<int> metrix)
-        {
-            return metrix[0] * 1 + metrix[1] * 2 + metrix[2] * 4 + metrix[3] * 8 + metrix[4] * 16 + metrix[5] * 32 + metrix[6] * 64 + metrix[7] * 127;
-        }
         public List<List<StockModel>> ReadDataFromFile(string path)
         {
             Console.WriteLine($"Getting data from {path}");
