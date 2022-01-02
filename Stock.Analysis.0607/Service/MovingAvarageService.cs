@@ -44,7 +44,7 @@ namespace Stock.Analysis._0607.Service
                 avgList.Add(new StockModel
                 {
                     Date = stock.Date,
-                    Price = sumPrice == 0 ? null : (double)Math.Round(((decimal)sumPrice) / avgDay, 2, MidpointRounding.AwayFromZero)
+                    Price = sumPrice == 0 ? null : (double)Math.Round(((decimal)sumPrice) / avgDay, 10, MidpointRounding.AwayFromZero)
                 });
                 prePrice = sumPrice;
                 index++;

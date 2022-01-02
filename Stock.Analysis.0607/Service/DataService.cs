@@ -28,11 +28,13 @@ namespace Stock.Analysis._0607.Service
             var index = 0;
             timestamps?.ForEach(timestamp =>
             {
+                var price = closeStockValue.ElementAt(index) ?? 0;
                 if (closeStockValue.Any())
                 {
                     result.Add(new StockModel
                     {
                         Date = timestamp,
+                        //Price = Math.Round(price, 2, MidpointRounding.AwayFromZero)
                         Price = closeStockValue.ElementAt(index)
                     });
                 }
