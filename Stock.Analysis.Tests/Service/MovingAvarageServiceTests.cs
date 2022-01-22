@@ -11,16 +11,16 @@ namespace Stock.Analysis.Tests.Service
     public class MovingAvarageServiceTests
     {
         private IMovingAvarageService _movingAvgService = new MovingAvarageService();
-        private List<double?> ma5FromYahoo = new List<double?> { 95.26, 100.24, 106.5, 110.52, 112.9, 114.4, 115.5, 114.4, 115.9, 121, 124.6,
+        private List<double> ma5FromYahoo = new List<double> { 95.26, 100.24, 106.5, 110.52, 112.9, 114.4, 115.5, 114.4, 115.9, 121, 124.6,
             128.7, 134, 139.6, 143.1, 144.1, 147.2, 151.2, 156, 161.2, 172.9
         };
-        private List<double?> ma10FromYahoo = new List<double?> { 88.31, 91.73, 95.93, 99.11, 101.52, 104.83, 107.87, 110.45, 113.21, 116.95, 119.5,
+        private List<double> ma10FromYahoo = new List<double> { 88.31, 91.73, 95.93, 99.11, 101.52, 104.83, 107.87, 110.45, 113.21, 116.95, 119.5,
             122.1, 124.2, 127.75, 132.05, 134.35, 137.95, 142.6, 147.8, 152.15, 158.5
         };
-        private List<double?> ma20FromYahoo = new List<double?> { 84.22, 85.75, 87.64, 89.22, 90.07, 91.06, 92.56, 94.36, 97.05, 100.7, 103.9,
+        private List<double> ma20FromYahoo = new List<double> { 84.22, 85.75, 87.64, 89.22, 90.07, 91.06, 92.56, 94.36, 97.05, 100.7, 103.9,
             106.91, 110.06, 113.43, 116.78, 119.59, 122.91, 126.53, 130.5, 134.55, 139
         };
-        private List<double?> ma60FromYahoo = new List<double?> { 63.8, 65.02, 66.38, 67.7, 68.91, 70.2, 71.49, 72.74, 74.14, 75.75, 77.3,
+        private List<double> ma60FromYahoo = new List<double> { 63.8, 65.02, 66.38, 67.7, 68.91, 70.2, 71.49, 72.74, 74.14, 75.75, 77.3,
             78.88, 80.52, 82.29, 84.14, 85.72, 87.55, 89.5, 91.71, 93.97, 96.49
         };
         private readonly IRepository _historyRepository = new HistoryRepository();
@@ -179,15 +179,19 @@ namespace Stock.Analysis.Tests.Service
         {
             var historyRepo = new HistoryRepository();
             var dataList = historyRepo.GetRealData120dOf2603();
-            var ma5 = _movingAvgService.CalculateMovingAvarage(dataList, 5).Select(s => s.Price).ToList().GetRange(61,21);
-            var ma10 = _movingAvgService.CalculateMovingAvarage(dataList, 10).Select(s => s.Price).ToList().GetRange(61, 21);
-            var ma20 = _movingAvgService.CalculateMovingAvarage(dataList, 20).Select(s => s.Price).ToList().GetRange(61, 21);
-            var ma60 = _movingAvgService.CalculateMovingAvarage(dataList, 60).Select(s => s.Price).ToList().GetRange(61, 21);
+            var ma5 = _movingAvgService.CalculateMovingAvarage(dataList, 5)
+                .Select(s => s.Price == null ? 0 : Math.Round(s.Price ?? 0, 2, MidpointRounding.AwayFromZero)).ToList().GetRange(61,21);
+            var ma10 = _movingAvgService.CalculateMovingAvarage(dataList, 10)
+                .Select(s => s.Price == null ? 0 : Math.Round(s.Price ?? 0, 2, MidpointRounding.AwayFromZero)).ToList().GetRange(61, 21);
+            var ma20 = _movingAvgService.CalculateMovingAvarage(dataList, 20)
+                .Select(s => s.Price == null ? 0 : Math.Round(s.Price ?? 0, 2, MidpointRounding.AwayFromZero)).ToList().GetRange(61, 21);
+            var ma60 = _movingAvgService.CalculateMovingAvarage(dataList, 60)
+                .Select(s => s.Price == null ? 0 : Math.Round(s.Price ?? 0, 2, MidpointRounding.AwayFromZero)).ToList().GetRange(61, 21);
 
-            Assert.Equal<double?>(ma5FromYahoo, ma5);
-            Assert.Equal<double?>(ma10FromYahoo, ma10);
-            Assert.Equal<double?>(ma20FromYahoo, ma20);
-            Assert.Equal<double?>(ma60FromYahoo, ma60);
+            Assert.Equal<double>(ma5FromYahoo, ma5);
+            Assert.Equal<double>(ma10FromYahoo, ma10);
+            Assert.Equal<double>(ma20FromYahoo, ma20);
+            Assert.Equal<double>(ma60FromYahoo, ma60);
         }
 
         [Fact]
@@ -197,20 +201,24 @@ namespace Stock.Analysis.Tests.Service
             var dataList = dataService.GetPeriodDataFromYahooApi("2603.TW", new DateTime(2021,3,1), new DateTime(2021,7,1));
             var filehandler = new FileHandler();
             filehandler.OutputCsv(dataList, "Price");
-            var ma5 = _movingAvgService.CalculateMovingAvarage(dataList, 5).Select(s => s.Price).ToList().GetRange(61, 21);
-            var ma10 = _movingAvgService.CalculateMovingAvarage(dataList, 10).Select(s => s.Price).ToList().GetRange(61, 21);
-            var ma20 = _movingAvgService.CalculateMovingAvarage(dataList, 20).Select(s => s.Price).ToList().GetRange(61, 21);
-            var ma60 = _movingAvgService.CalculateMovingAvarage(dataList, 60).Select(s => s.Price).ToList().GetRange(61, 21);
+            var ma5 = _movingAvgService.CalculateMovingAvarage(dataList, 5)
+                .Select(s => s.Price == null ? 0 : Math.Round(s.Price ?? 0, 2, MidpointRounding.AwayFromZero)).ToList().GetRange(61, 21);
+            var ma10 = _movingAvgService.CalculateMovingAvarage(dataList, 10)
+                .Select(s => s.Price == null ? 0 : Math.Round(s.Price ?? 0, 2, MidpointRounding.AwayFromZero)).ToList().GetRange(61, 21);
+            var ma20 = _movingAvgService.CalculateMovingAvarage(dataList, 20)
+                .Select(s => s.Price == null ? 0 : Math.Round(s.Price ?? 0, 2, MidpointRounding.AwayFromZero)).ToList().GetRange(61, 21);
+            var ma60 = _movingAvgService.CalculateMovingAvarage(dataList, 60)
+                .Select(s => s.Price == null ? 0 : Math.Round(s.Price ?? 0, 2, MidpointRounding.AwayFromZero)).ToList().GetRange(61, 21);
 
-            Assert.Equal<double?>(ma5FromYahoo, ma5);
-            Assert.Equal<double?>(ma10FromYahoo, ma10);
+            Assert.Equal<double>(ma5FromYahoo, ma5);
+            Assert.Equal<double>(ma10FromYahoo, ma10);
             var index = -1;
             Assert.All(ma20, value=>
             {
                 index++;
                 Assert.Equal(ma20FromYahoo.ElementAt(index), value);
             });
-            Assert.Equal<double?>(ma60FromYahoo, ma60);
+            Assert.Equal<double>(ma60FromYahoo, ma60);
         }
     }
 }

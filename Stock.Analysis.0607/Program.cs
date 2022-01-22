@@ -13,7 +13,7 @@ namespace Stock.Analysis._0607
     {
 
         private static IResearchOperationService _researchOperationService = new ResearchOperationService();
-        private static IAlgorithmService _qtsAlgorithmService = new QTSAlgorithmService();
+        private static IGNQTSAlgorithmService _qtsAlgorithmService = new GNQTSAlgorithmService();
         private static IFileHandler _fileHandler = new FileHandler();
         private static IDataService _dataService = new DataService();
         const string SYMBOL = "2603.TW";

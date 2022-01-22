@@ -8,12 +8,12 @@ using System.Linq;
 
 namespace Stock.Analysis.Tests.Service
 {
-    public class QTSAlgorithmServiceTests
+    public class GNQTSAlgorithmServiceTests
     {
-        private readonly IAlgorithmService _qtsService = new QTSAlgorithmService();
+        private readonly IGNQTSAlgorithmService _qtsService = new GNQTSAlgorithmService();
         private readonly IMovingAvarageService _movingAvarageService = new MovingAvarageService();
         private readonly IRepository _historyRepository = new HistoryRepository();
-        public QTSAlgorithmServiceTests()
+        public GNQTSAlgorithmServiceTests()
         {
         }
 
@@ -195,6 +195,40 @@ namespace Stock.Analysis.Tests.Service
             Assert.Equal(1297974, Math.Round(result));
         }
 
+        [Theory]
+        [MemberData(nameof(TestData.ProbabilityGn), MemberType = typeof(TestData))]
+        public void TestUpdateProByGN(List<double> expectedBeta)
+        {
+            var gbest = new StatusValue
+            {
+                BuyMa1 = new List<int> { 1, 1, 0, 0, 0, 0, 0, 0 },
+                BuyMa2 = new List<int> { 1, 1, 0, 0, 0, 0, 0, 0 },
+                SellMa1 = new List<int> { 1, 1, 0, 0, 0, 0, 0, 0 },
+                SellMa2 = new List<int> { 1, 1, 0, 0, 0, 0, 0, 0 }
+            };
+            var localworst = new StatusValue
+            {
+                BuyMa1 = new List<int> { 0, 1, 1, 0, 1, 0, 0, 0 },
+                BuyMa2 = new List<int> { 0, 1, 1, 0, 1, 0, 0, 0 },
+                SellMa1 = new List<int> { 0, 1, 1, 0, 1, 0, 0, 0 },
+                SellMa2 = new List<int> { 0, 1, 1, 0, 1, 0, 0, 0 }
+            };
+            var particale = new Particle
+            {
+                BuyMa1Beta = new List<double> { 0.3, 0.7, 0.8, 0.2, 0.1, 0, 0, 0 },
+                BuyMa2Beta = new List<double> { 0.3, 0.7, 0.8, 0.2, 0.1, 0, 0, 0 },
+                SellMa1Beta = new List<double> { 0.3, 0.7, 0.8, 0.2, 0.1, 0, 0, 0 },
+                SellMa2Beta = new List<double> { 0.3, 0.7, 0.8, 0.2, 0.1, 0, 0, 0 },
+            };
+            _qtsService.UpdateProByGN(particale, gbest, localworst);
+            int index = 0;
+            Assert.All(particale.BuyMa1Beta, actualBeta => {
+                Assert.Equal(expectedBeta[index], actualBeta);
+                index++;
+            });
+
+        }
+
         public class TestData
         {
             public static IEnumerable<object[]> MaMetrix =>
@@ -235,6 +269,13 @@ namespace Stock.Analysis.Tests.Service
                 },
             };
 
+            public static IEnumerable<object[]> ProbabilityGn =>
+            new List<object[]>
+            {
+                new object[] {
+                    new List<double> { 0.7, 0.7, 0.2, 0.2, 0.1, 0, 0, 0 }
+                }
+            };
         }
     }
 }
