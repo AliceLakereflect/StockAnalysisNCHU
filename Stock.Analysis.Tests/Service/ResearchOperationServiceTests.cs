@@ -217,7 +217,7 @@ namespace Stock.Analysis.Tests.Service
 
             var result = _researchOperationService.GetMyTransactions(chartData, dataList, testCase, _periodStart);
             Assert.Equal(15, result.Count);
-            var expectedBuyTime = new List<string>{ "2020-4-10", "2020-7-7", "2020-7-22", "2020-8-3", "2020-10-8", "2021-2-17", "2021-5-25" };
+            var expectedBuyTime = new List<string>{ "2020-4-10", "2020-7-7", "2020-7-21", "2020-8-3", "2020-10-8", "2021-2-17", "2021-5-25" };
             var index = 0;
             Assert.All(result.FindAll(t=>t.TransType == TransactionType.Buy), trans=> {
                 Assert.Equal(expectedBuyTime.ElementAt(index), trans.TransTimeString);
@@ -230,18 +230,18 @@ namespace Stock.Analysis.Tests.Service
                 index++;
             });
 
-            var expectedBalance = new List<double> { 100000, 10, 110293, 10, 104902, 1, 103944, 8, 151444, 13, 309243, 9, 584773, 63, 1397975 };
+            var expectedBalance = new List<double> { 100000, 9, 110293, 9, 104902, 1, 103944, 7, 151444, 12, 309242, 8, 584772, 62, 1397974 };
             var expectedVolume = new List<int> { 0, 9803, 9803, 9803, 9803, 9580, 9580, 9406, 9406, 9095, 9095, 8426, 8426, 7096, 7096 };
             index = 0;
             Assert.All(result, trans => {
-                Assert.Equal(expectedBalance.ElementAt(index), trans.Balance);
+                Assert.Equal(expectedBalance.ElementAt(index), Math.Round(trans.Balance));
                 Assert.Equal(expectedVolume.ElementAt(index), trans.TransVolume);
                 index++;
             });
 
             var transactions = _researchOperationService.ProfitSettlement(197, dataList, testCase, result, Utils.ConvertToUnixTimestamp(periodEnd));
             var earn = _researchOperationService.GetEarningsResults(transactions);
-            Assert.Equal(1297975, earn);
+            Assert.Equal(1297974, Math.Round(earn));
             var lastTrans = result.LastOrDefault();
             Assert.Equal(197, lastTrans.TransPrice);
         }
@@ -254,10 +254,10 @@ namespace Stock.Analysis.Tests.Service
             var testCase = new TestCase
             {
                 Funds = 10000000,
-                BuyShortTermMa = 213,
-                BuyLongTermMa = 214,
-                SellShortTermMa = 8,
-                SellLongTermMa = 214
+                BuyShortTermMa = 206,
+                BuyLongTermMa = 210,
+                SellShortTermMa = 136,
+                SellLongTermMa = 127
             };
 
             var periodStart = new DateTime(2020, 1, 1, 0, 0, 0);

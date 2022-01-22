@@ -6,17 +6,17 @@ using Stock.Analysis._0607.Models;
 
 namespace Stock.Analysis._0607.Service
 {
-    public class QTSAlgorithmService: IAlgorithmService
+    public class GNQTSAlgorithmService: IGNQTSAlgorithmService
     {
         private static IResearchOperationService _researchOperationService = new ResearchOperationService();
-        // QTS paremeters
+        // GNQTS paremeters
         const double DELTA = 0.003;
         const int GENERATIONS = 10000;
         const int SEARCH_NODE_NUMBER = 10;
         const int DIGIT_NUMBER = 8;
         const double RANDOM_MAX = 32767.0;
 
-        public QTSAlgorithmService()
+        public GNQTSAlgorithmService()
         {
             
         }
@@ -25,7 +25,7 @@ namespace Stock.Analysis._0607.Service
         {
             return new AlgorithmConst
             {
-                Name = "QTS",
+                Name = "GNQTS",
                 DELTA = DELTA,
                 GENERATIONS = GENERATIONS,
                 SEARCH_NODE_NUMBER = SEARCH_NODE_NUMBER
@@ -94,8 +94,8 @@ namespace Stock.Analysis._0607.Service
             GetLocalBestAndWorst(particles, ref localBest, ref localWorst);
             #region debug
 
-            csv.WriteField("local best");
-            DebugPrintParticle(csv, localBest);
+            csv.WriteField("global best");
+            DebugPrintParticle(csv, gBest);
             csv.NextRecord();
             csv.WriteField("local worst");
             DebugPrintParticle(csv, localWorst);
@@ -104,9 +104,13 @@ namespace Stock.Analysis._0607.Service
             #endregion
             particles.ForEach((p) =>
             {
-                UpdateProbability(p, localBest, localWorst);
+                UpdateProByGN(p, gBest, localWorst);
             });
-
+            particles.ForEach((p) =>
+            {
+                UpdateProbability(p, gBest, localWorst);
+            });
+            
             #region debug
 
             csv.WriteField("beta matrix");
@@ -145,8 +149,8 @@ namespace Stock.Analysis._0607.Service
                 GetLocalBestAndWorst(particles, ref localBest, ref localWorst);
                 #region debug
 
-                csv.WriteField("local best");
-                DebugPrintParticle(csv, localBest);
+                csv.WriteField("global best");
+                DebugPrintParticle(csv, gBest);
                 csv.NextRecord();
                 csv.WriteField("local worst");
                 DebugPrintParticle(csv, localWorst);
@@ -154,11 +158,18 @@ namespace Stock.Analysis._0607.Service
 
                 #endregion
                 // update probability
+
                 particles.ForEach((p) =>
                 {
-                    UpdateProbability(p, localBest, localWorst);
+                    UpdateProByGN(p, gBest, localWorst);
+                });
+                particles.ForEach((p) =>
+                {
+                    UpdateProbability(p, gBest, localWorst);
                     
                 });
+
+                
                 #region debug
 
                 csv.WriteField("beta matrix");
@@ -287,50 +298,84 @@ namespace Stock.Analysis._0607.Service
             localWorst = min;
         }
 
-        public void UpdateProbability(Particle p, StatusValue localBest, StatusValue localWorst)
+        public void UpdateProbability(Particle p, StatusValue gBest, StatusValue localWorst)
         {
-            if (localBest.Fitness == 0) return;
+            if (gBest.Fitness == 0) return;
             for (var index = 0; index < DIGIT_NUMBER; index++)
             {
                 // BuyMa1
-                if (localBest.BuyMa1[index] > localWorst.BuyMa1[index])
+                if (gBest.BuyMa1[index] > localWorst.BuyMa1[index])
                 {
                     p.BuyMa1Beta[index] = Math.Round(p.BuyMa1Beta[index] + DELTA, 3);
                 }
-                else if (localBest.BuyMa1[index] < localWorst.BuyMa1[index])
+                else if (gBest.BuyMa1[index] < localWorst.BuyMa1[index])
                 {
                     p.BuyMa1Beta[index] = Math.Round(p.BuyMa1Beta[index] - DELTA, 3);
                 }
                 // BuyMa2
-                if (localBest.BuyMa2[index] > localWorst.BuyMa2[index])
+                if (gBest.BuyMa2[index] > localWorst.BuyMa2[index])
                 {
                     p.BuyMa2Beta[index] = Math.Round(p.BuyMa2Beta[index] + DELTA, 3);
                 }
-                else if (localBest.BuyMa2[index] < localWorst.BuyMa2[index])
+                else if (gBest.BuyMa2[index] < localWorst.BuyMa2[index])
                 {
                     p.BuyMa2Beta[index] = Math.Round(p.BuyMa2Beta[index] - DELTA, 3);
                 }
                 // SellMa1
-                if (localBest.SellMa1[index] > localWorst.SellMa1[index])
+                if (gBest.SellMa1[index] > localWorst.SellMa1[index])
                 {
                     p.SellMa1Beta[index] = Math.Round(p.SellMa1Beta[index] + DELTA, 3);
                 }
-                else if (localBest.SellMa1[index] < localWorst.SellMa1[index])
+                else if (gBest.SellMa1[index] < localWorst.SellMa1[index])
                 {
                     p.SellMa1Beta[index] = Math.Round(p.SellMa1Beta[index] - DELTA, 3);
                 }
                 // SellMa2
-                if (localBest.SellMa2[index] > localWorst.SellMa2[index])
+                if (gBest.SellMa2[index] > localWorst.SellMa2[index])
                 {
                     p.SellMa2Beta[index] = Math.Round(p.SellMa2Beta[index] + DELTA, 3);
                 }
-                else if (localBest.SellMa2[index] < localWorst.SellMa2[index])
+                else if (gBest.SellMa2[index] < localWorst.SellMa2[index])
                 {
                     p.SellMa2Beta[index] = Math.Round(p.SellMa2Beta[index] - DELTA, 3);
                 }
             }
         }
 
+        public void UpdateProByGN(Particle p, StatusValue gbest, StatusValue localWorst)
+        {
+            for (var index = 0; index < DIGIT_NUMBER; index++)
+            {
+                // BuyMa1
+                if ((gbest.BuyMa1[index] > localWorst.BuyMa1[index] && p.BuyMa1Beta[index] < 0.5)
+                    || (gbest.BuyMa1[index] < localWorst.BuyMa1[index] && p.BuyMa1Beta[index] > 0.5))
+                {
+                    p.BuyMa1Beta[index] = Math.Round(1 - p.BuyMa1Beta[index], 3);
+                }
+
+                // BuyMa2
+                if ((gbest.BuyMa2[index] > localWorst.BuyMa2[index] && p.BuyMa2Beta[index] < 0.5)
+                    || (gbest.BuyMa2[index] < localWorst.BuyMa2[index] && p.BuyMa2Beta[index] > 0.5))
+                {
+                    p.BuyMa2Beta[index] = Math.Round(1 - p.BuyMa2Beta[index], 3);
+                }
+
+                // SellMa1
+                if ((gbest.SellMa1[index] > localWorst.SellMa1[index] && p.SellMa1Beta[index] < 0.5)
+                    || (gbest.SellMa1[index] < localWorst.SellMa1[index] && p.SellMa1Beta[index] > 0.5))
+                {
+                    p.SellMa1Beta[index] = Math.Round(1 - p.SellMa1Beta[index], 3);
+                }
+
+                // SellMa2
+                if ((gbest.SellMa2[index] > localWorst.SellMa2[index] && p.SellMa2Beta[index] < 0.5)
+                    || (gbest.SellMa2[index] < localWorst.SellMa2[index] && p.SellMa2Beta[index] > 0.5))
+                {
+                    p.SellMa2Beta[index] = Math.Round(1 - p.SellMa2Beta[index], 3);
+                }
+            }
+
+        }
         public int GetMaNumber(List<int> metrix) 
         {
             return 1 + metrix[7] * 1 + metrix[6] * 2 + metrix[5] * 4 + metrix[4] * 8 + metrix[3] * 16 + metrix[2] * 32 + metrix[1] * 64 + metrix[0] * 128;
@@ -386,5 +431,10 @@ namespace Stock.Analysis._0607.Service
             var earns = _researchOperationService.GetEarningsResults(transactions);
             return earns;
         }
+    }
+
+    public interface IGNQTSAlgorithmService : IAlgorithmService
+    {
+        public void UpdateProByGN(Particle p, StatusValue gbest, StatusValue localWorst);
     }
 }
