@@ -29,11 +29,4 @@ namespace Stock.Analysis._0607.Service
             return (int)holdingVolumn;
         }
     }
-
-    public interface ICalculateVolumeService
-    {
-        int CalculateBuyingVolume(double funds, double price);
-        int CalculateBuyingVolumeOddShares(double funds, double price);
-        int CalculateSellingVolume(decimal holdingVolumn);
-    }
 }

@@ -106,12 +106,4 @@ namespace Stock.Analysis._0607.Service
             return responseFromServer;
         }
     }
-
-    public interface IDataService
-    {
-        List<StockModel> Get1YDataFromYahooApi(string stockSymbol);
-        List<StockModel> Get1dDataFromYahooApi(string stockSymbol);
-        List<StockModel> GetPeriodDataFromYahooApi(string stockSymbol, DateTime period1, DateTime period2);
-        string SendGetRequest(string url);
-    }
 }

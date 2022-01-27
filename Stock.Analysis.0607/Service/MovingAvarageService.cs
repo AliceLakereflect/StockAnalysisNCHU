@@ -52,8 +52,4 @@ namespace Stock.Analysis._0607.Service
             return avgList.OrderBy(s => s.Date).ToList();
         }
     }
-    public interface IMovingAvarageService
-    {
-        List<StockModel?> CalculateMovingAvarage(List<StockModel> stockList, int avgDay);
-    }
 }
