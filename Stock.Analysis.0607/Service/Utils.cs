@@ -1,4 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+
 namespace Stock.Analysis._0607.Service
 {
     public static class Utils
@@ -16,6 +19,14 @@ namespace Stock.Analysis._0607.Service
             DateTime origin = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
             TimeSpan diff = date.ToUniversalTime() - origin;
             return Math.Floor(diff.TotalSeconds);
+        }
+
+        public static int GetMaNumber(List<int> metrix)
+        {
+            if (metrix.Any())
+                return 1 + metrix[7] * 1 + metrix[6] * 2 + metrix[5] * 4 + metrix[4] * 8 + metrix[3] * 16 + metrix[2] * 32 + metrix[1] * 64 + metrix[0] * 128;
+            else
+                return 0;
         }
     }
 }

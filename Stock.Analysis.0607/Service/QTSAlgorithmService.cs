@@ -16,7 +16,7 @@ namespace Stock.Analysis._0607.Service
 
     public class QTSAlgorithmService: IQTSAlgorithmService
     {
-        private static IResearchOperationService _researchOperationService = new ResearchOperationService();
+        private static IResearchOperationService _researchOperationService;
         // QTS paremeters
         const double DELTA = 0.003;
         const int GENERATIONS = 10000;
@@ -24,9 +24,9 @@ namespace Stock.Analysis._0607.Service
         const int DIGIT_NUMBER = 8;
         const double RANDOM_MAX = 32767.0;
 
-        public QTSAlgorithmService()
+        public QTSAlgorithmService(IResearchOperationService researchOperationService)
         {
-            
+            _researchOperationService = researchOperationService ?? throw new ArgumentNullException(nameof(researchOperationService));
         }
 
         public AlgorithmConst GetConst()
@@ -230,7 +230,7 @@ namespace Stock.Analysis._0607.Service
             {
                 str += $"{digit}";
             });
-            csv.WriteField($"{GetMaNumber(current.BuyMa1)} ({str})");
+            csv.WriteField($"{Utils.GetMaNumber(current.BuyMa1)} ({str})");
             csv.WriteField("");
 
             str = string.Empty;
@@ -238,7 +238,7 @@ namespace Stock.Analysis._0607.Service
             {
                 str += $"{digit}";
             });
-            csv.WriteField($"{GetMaNumber(current.BuyMa2)} ({str})");
+            csv.WriteField($"{Utils.GetMaNumber(current.BuyMa2)} ({str})");
             csv.WriteField("");
 
             str = string.Empty;
@@ -246,7 +246,7 @@ namespace Stock.Analysis._0607.Service
             {
                 str += $"{digit}";
             });
-            csv.WriteField($"{GetMaNumber(current.SellMa1)} ({str})");
+            csv.WriteField($"{Utils.GetMaNumber(current.SellMa1)} ({str})");
             csv.WriteField("");
 
             str = string.Empty;
@@ -254,7 +254,7 @@ namespace Stock.Analysis._0607.Service
             {
                 str += $"{digit}";
             });
-            csv.WriteField($"{GetMaNumber(current.SellMa2)} ({str})");
+            csv.WriteField($"{Utils.GetMaNumber(current.SellMa2)} ({str})");
             csv.WriteField("");
         }
 
@@ -339,14 +339,6 @@ namespace Stock.Analysis._0607.Service
             }
         }
 
-        public int GetMaNumber(List<int> metrix) 
-        {
-            if (metrix.Any())
-                return 1 + metrix[7] * 1 + metrix[6] * 2 + metrix[5] * 4 + metrix[4] * 8 + metrix[3] * 16 + metrix[2] * 32 + metrix[1] * 64 + metrix[0] * 128;
-            else
-                return 0;
-        }
-
         public void MeatureX(Random random, List<Particle> particles, double funds)
         {
             particles.ForEach((p) =>
@@ -375,10 +367,10 @@ namespace Stock.Analysis._0607.Service
                     p.CurrentFitness.SellMa2.Add(x >= random.Next() / RANDOM_MAX ? 1 : 0);
                 });
 
-                var buyMa1 = GetMaNumber(p.CurrentFitness.BuyMa1);
-                var buyMa2 = GetMaNumber(p.CurrentFitness.BuyMa2);
-                var sellMa1 = GetMaNumber(p.CurrentFitness.SellMa1);
-                var sellMa2 = GetMaNumber(p.CurrentFitness.SellMa2);
+                var buyMa1 = Utils.GetMaNumber(p.CurrentFitness.BuyMa1);
+                var buyMa2 = Utils.GetMaNumber(p.CurrentFitness.BuyMa2);
+                var sellMa1 = Utils.GetMaNumber(p.CurrentFitness.SellMa1);
+                var sellMa2 = Utils.GetMaNumber(p.CurrentFitness.SellMa2);
                 p.TestCase = new TestCase
                 {
                     Funds = funds,

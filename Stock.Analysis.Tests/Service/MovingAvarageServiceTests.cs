@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Stock.Analysis._0607.Models;
 using Stock.Analysis.Tests.MockData;
+using Moq;
 
 namespace Stock.Analysis.Tests.Service
 {

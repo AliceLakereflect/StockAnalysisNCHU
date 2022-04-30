@@ -8,12 +8,20 @@ namespace Stock.Analysis._0607.Service
 {
     public class ResearchOperationService: IResearchOperationService
     {
-        private IMovingAvarageService _movingAvgService = new MovingAvarageService();
-        private ITransTimingService _transTimingService = new TransTimingService();
-        private ICalculateVolumeService _calculateVolumeService = new CalculateVolumeService();
-        private IFileHandler _fileHandler = new FileHandler();
-        public ResearchOperationService()
+        private IMovingAvarageService _movingAvgService;
+        private ITransTimingService _transTimingService;
+        private ICalculateVolumeService _calculateVolumeService;
+        private IFileHandler _fileHandler;
+        public ResearchOperationService(
+            IMovingAvarageService movingAvgService,
+            ITransTimingService transTimingService,
+            ICalculateVolumeService calculateVolumeService,
+            IFileHandler fileHandler)
         {
+            _movingAvgService = movingAvgService ?? throw new ArgumentNullException(nameof(movingAvgService));
+            _transTimingService = transTimingService ?? throw new ArgumentNullException(nameof(transTimingService));
+            _calculateVolumeService = calculateVolumeService ?? throw new ArgumentNullException(nameof(calculateVolumeService));
+            _fileHandler = fileHandler ?? throw new ArgumentNullException(nameof(fileHandler));
         }
 
         private static DateTime UnixTimeStampToDateTime(double unixTimeStamp)
@@ -24,6 +32,7 @@ namespace Stock.Analysis._0607.Service
             return dtDateTime;
         }
 
+        // todo change this to query db
         public ChartData GetMaFromYahoo(string symbol, List<StockModel> stockList, double start, double end)
         {
             var chartData = new ChartData();

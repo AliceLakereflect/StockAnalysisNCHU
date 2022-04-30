@@ -9,6 +9,7 @@ namespace Stock.Analysis._0607.Service
         List<StockModel> Get1YDataFromYahooApi(string stockSymbol);
         List<StockModel> Get1dDataFromYahooApi(string stockSymbol);
         List<StockModel> GetPeriodDataFromYahooApi(string stockSymbol, DateTime period1, DateTime period2);
+        List<StockModel> GetMaForStockList(List<StockModel> stockList);
         string SendGetRequest(string url);
     }
 }

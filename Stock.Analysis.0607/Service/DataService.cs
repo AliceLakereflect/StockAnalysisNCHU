@@ -77,6 +77,11 @@ namespace Stock.Analysis._0607.Service
             return result;
         }
 
+        public List<StockModel> GetMaForStockList(List<StockModel> stockList) {
+
+            return stockList;
+        }
+
         public string SendGetRequest(string url)
         {
             var responseFromServer = string.Empty;

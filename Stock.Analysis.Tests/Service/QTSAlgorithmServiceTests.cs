@@ -5,16 +5,23 @@ using Xunit;
 using System.Collections.Generic;
 using Stock.Analysis.Tests.MockData;
 using System.Linq;
+using Moq;
 
 namespace Stock.Analysis.Tests.Service
 {
     public class QTSAlgorithmServiceTests
     {
-        private readonly IQTSAlgorithmService _qtsService = new QTSAlgorithmService();
+        private readonly IQTSAlgorithmService _qtsService;
+        private readonly IResearchOperationService _researchOperationService;
         private readonly IMovingAvarageService _movingAvarageService = new MovingAvarageService();
+        private readonly ITransTimingService _transTimingService = new TransTimingService();
+        private readonly ICalculateVolumeService _calculateVolumeService = new CalculateVolumeService();
+        private readonly Mock<IFileHandler> _fileHandler = new Mock<IFileHandler>();
         private readonly IRepository _historyRepository = new HistoryRepository();
         public QTSAlgorithmServiceTests()
         {
+            _researchOperationService = new ResearchOperationService(_movingAvarageService, _transTimingService, _calculateVolumeService, _fileHandler.Object);
+            _qtsService = new QTSAlgorithmService(_researchOperationService);
         }
 
         [Fact]
@@ -120,7 +127,7 @@ namespace Stock.Analysis.Tests.Service
         [MemberData(nameof(TestData.MaMetrix), MemberType = typeof(TestData))]
         public void TestGetMaNumber(List<int> metrix, int expect)
         {
-            var result = _qtsService.GetMaNumber(metrix);
+            var result = Utils.GetMaNumber(metrix);
             Assert.Equal(expect, result);
         }
 

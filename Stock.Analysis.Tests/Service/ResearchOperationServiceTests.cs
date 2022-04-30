@@ -6,15 +6,18 @@ using System.Collections.Generic;
 using System.Linq;
 using Stock.Analysis.Tests.MockData;
 using System.Diagnostics;
+using Moq;
 
 namespace Stock.Analysis.Tests.Service
 {
     public class ResearchOperationServiceTests
     {
-        private readonly IResearchOperationService _researchOperationService = new ResearchOperationService();
+        private readonly IResearchOperationService _researchOperationService;
         private readonly IMovingAvarageService _movingAvarageService = new MovingAvarageService();
+        private readonly ITransTimingService _transTimingService = new TransTimingService();
+        private readonly ICalculateVolumeService _calculateVolumeService = new CalculateVolumeService();
+        private readonly Mock<IFileHandler> _fileHandler = new Mock<IFileHandler>();
         private readonly IRepository _historyRepository = new HistoryRepository();
-        DateTime _dateTime;
         ChartData _historicalData;
         List<StockModel> _stockList = new List<StockModel>();
         TestCase _testCase = new TestCase { Funds = 100000, BuyShortTermMa = 5, BuyLongTermMa = 20, SellShortTermMa = 5, SellLongTermMa = 20 };
@@ -23,6 +26,7 @@ namespace Stock.Analysis.Tests.Service
 
         public ResearchOperationServiceTests()
         {
+            _researchOperationService = new ResearchOperationService(_movingAvarageService, _transTimingService, _calculateVolumeService, _fileHandler.Object);
             _historicalData = _historyRepository.GetAscHistoryData();
             _stockList = _historyRepository.GetAscStockList();
         }

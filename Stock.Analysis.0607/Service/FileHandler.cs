@@ -11,7 +11,6 @@ namespace Stock.Analysis._0607.Service
 {
     public class FileHandler: IFileHandler
     {
-        private static IAlgorithmService _qtsAlgorithmService = new QTSAlgorithmService();
         public FileHandler()
         {
         }
@@ -155,16 +154,16 @@ namespace Stock.Analysis._0607.Service
 
                 csv.NextRecord();
                 csv.WriteField("Buy1");
-                csv.WriteField(_qtsAlgorithmService.GetMaNumber(gBest.BuyMa1));
+                csv.WriteField(Utils.GetMaNumber(gBest.BuyMa1));
                 csv.NextRecord();
                 csv.WriteField("Buy2");
-                csv.WriteField(_qtsAlgorithmService.GetMaNumber(gBest.BuyMa2));
+                csv.WriteField(Utils.GetMaNumber(gBest.BuyMa2));
                 csv.NextRecord();
                 csv.WriteField("Sell1");
-                csv.WriteField(_qtsAlgorithmService.GetMaNumber(gBest.SellMa1));
+                csv.WriteField(Utils.GetMaNumber(gBest.SellMa1));
                 csv.NextRecord();
                 csv.WriteField("Sell2");
-                csv.WriteField(_qtsAlgorithmService.GetMaNumber(gBest.SellMa2));
+                csv.WriteField(Utils.GetMaNumber(gBest.SellMa2));
                 csv.NextRecord();
                 csv.WriteField("Number of Trades");
                 csv.WriteField((transactions.Count-1)/2);

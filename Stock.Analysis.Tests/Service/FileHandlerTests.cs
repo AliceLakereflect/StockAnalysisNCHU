@@ -5,15 +5,16 @@ using System.Collections.Generic;
 using System.IO;
 using Newtonsoft.Json;
 using Stock.Analysis._0607.Models;
+using Moq;
 
 namespace Stock.Analysis.Tests.Service
 {
     public class FileHandlerTests
     {
-        private IFileHandler _fileHandler = new FileHandler();
+        private IFileHandler _fileHandler;
         public FileHandlerTests()
         {
-
+            _fileHandler = new FileHandler();
         }
 
         [Fact]

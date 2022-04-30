@@ -12,7 +12,6 @@ namespace Stock.Analysis._0607.Service
         void UpdateGBestAndGWorst(Particle p, ref StatusValue gBest, ref StatusValue gWorst, int experiment, int iteration);
         void GetLocalBestAndWorst(List<Particle> particles, ref StatusValue localBest, ref StatusValue localWorst);
         void UpdateProbability(Particle p, StatusValue localBest, StatusValue localWorst);
-        int GetMaNumber(List<int> metrix);
         AlgorithmConst GetConst();
     }
 }
