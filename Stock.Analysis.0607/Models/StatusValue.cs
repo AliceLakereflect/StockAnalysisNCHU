@@ -9,8 +9,14 @@ namespace Stock.Analysis._0607.Models
         public List<int> SellMa1 { get; set; } = new List<int>();
         public List<int> SellMa2 { get; set; } = new List<int>();
         public double Fitness { get; set; } = 0;
-        public int Experiment { get; set; } = 0;
-        public int Generation { get; set; } = 0;
+        public int Experiment { get; set; } = -1;
+        public int Generation { get; set; } = -1;
+
+        public StatusValue() { }
+        public StatusValue(double funds)
+        {
+            Fitness = funds;
+        }
 
         public StatusValue DeepClone()
         {

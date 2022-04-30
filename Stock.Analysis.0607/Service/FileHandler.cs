@@ -120,7 +120,7 @@ namespace Stock.Analysis._0607.Service
             }
         }
 
-        public void OutputQTSResult(AlgorithmConst algorithmConst, double funds, StatusValue gBest, List<StockTransaction> transactions, string fileName)
+        public void OutputQTSResult(AlgorithmConst algorithmConst, double funds, StatusValue gBest, int gBestCount, List<StockTransaction> transactions, string fileName)
         {
             var path = Path.Combine(Environment.CurrentDirectory, $"Output/{fileName}.csv");
             using (var writer = new StreamWriter(path))
@@ -181,7 +181,7 @@ namespace Stock.Analysis._0607.Service
                 csv.WriteField(gBest.Generation);
                 csv.NextRecord();
                 csv.WriteField("Count");
-                csv.WriteField(1);
+                csv.WriteField(gBestCount);
                 csv.NextRecord();
 
                 csv.NextRecord();

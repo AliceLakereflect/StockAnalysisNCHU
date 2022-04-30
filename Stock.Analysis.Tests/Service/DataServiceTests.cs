@@ -34,7 +34,7 @@ namespace Stock.Analysis.Tests.Service
             var symbol = "AAPL";
             var result = _dataService.Get1dDataFromYahooApi(symbol);
             Assert.NotEmpty(result);
-            Assert.Equal(390, result.Count);
+            Assert.Equal(391, result.Count);
         }
 
         [Fact]
@@ -43,7 +43,7 @@ namespace Stock.Analysis.Tests.Service
             var symbol = "AAPL";
             var result = _dataService.Get1YDataFromYahooApi(symbol);
             Assert.NotEmpty(result);
-            Assert.Equal(252, result.Count);
+            Assert.Equal(253, result.Count);
         }
 
         [Fact]

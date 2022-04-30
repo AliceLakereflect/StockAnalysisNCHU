@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using CsvHelper;
 using Stock.Analysis._0607.Models;
@@ -10,7 +11,7 @@ namespace Stock.Analysis._0607.Service
     {
         private static IResearchOperationService _researchOperationService = new ResearchOperationService();
         // GNQTS paremeters
-        const double DELTA = 0.003;
+        private double DELTA = 0.003;
         const int GENERATIONS = 10000;
         const int SEARCH_NODE_NUMBER = 10;
         const int DIGIT_NUMBER = 8;
@@ -32,14 +33,23 @@ namespace Stock.Analysis._0607.Service
             };
         }
 
-        public StatusValue Fit(Queue<int> random, double funds, List<StockModel> stockList, ChartData data, int experiment, CsvWriter csv, DateTime periodStart)
+        public void SetDelta(double delda)
         {
+            DELTA = delda;
+        }
+
+        public StatusValue Fit(Queue<int> cRandom, Random random, double funds, List<StockModel> stockList, ChartData data, int experiment, CsvWriter csv, DateTime periodStart)
+        {
+            Stopwatch swGetFitness = new Stopwatch();
+            Stopwatch swGetMaValue = new Stopwatch();
+            Stopwatch swValidation = new Stopwatch();
+
             var iteration = 0;
             
-            var gBest = new StatusValue();
-            var gWorst = new StatusValue();
-            var localBest = new StatusValue();
-            var localWorst = new StatusValue();
+            var gBest = new StatusValue(funds);
+            var gWorst = new StatusValue(funds);
+            var localBest = new StatusValue(funds);
+            var localWorst = new StatusValue(funds);
             #region debug
 
             csv.WriteField($"exp:{experiment}");
@@ -55,14 +65,12 @@ namespace Stock.Analysis._0607.Service
                 particles.Add(new Particle());
             }
 
-            MetureX(random, particles, funds);
+            MetureX(cRandom, random, particles, funds);
 
-            var first = true;
             var index = 0;
             particles.ForEach((p) =>
             {
-                
-                p.CurrentFitness.Fitness = GetFitness(p.TestCase, stockList, data, periodStart);
+                p.CurrentFitness.Fitness = GetFitness(p.TestCase, stockList, data, periodStart, swGetMaValue, swValidation);
                 #region debug
 
                 csv.WriteField($"P{index}");
@@ -72,24 +80,18 @@ namespace Stock.Analysis._0607.Service
                 index++;
 
                 #endregion
-                if (first)
-                {
-                    gBest = p.CurrentFitness;
-                    gBest.Experiment = experiment;
-                    gBest.Generation = iteration;
-                    gWorst = p.CurrentFitness;
-                    gBest.Experiment = experiment;
-                    gBest.Generation = iteration;
-                }
-                else
+                
+            });
+            bool hasAnyTransaction = particles.FindAll(p => p.CurrentFitness.Fitness - funds != 0).Any();
+
+            particles.ForEach((p) =>
+            {
+                if (hasAnyTransaction)
                 {
                     UpdateGBestAndGWorst(p, ref gBest, ref gWorst, experiment, iteration);
                 }
-                first = false;
             });
 
-            
-            
             // update probability
             GetLocalBestAndWorst(particles, ref localBest, ref localWorst);
             #region debug
@@ -118,7 +120,8 @@ namespace Stock.Analysis._0607.Service
             csv.NextRecord();
 
             #endregion
-
+            swGetMaValue.Reset();
+            swValidation.Reset();
             while (iteration < GENERATIONS - 1)
             {
                 iteration++;
@@ -128,22 +131,34 @@ namespace Stock.Analysis._0607.Service
                 csv.NextRecord();
 
                 #endregion
-                MetureX(random, particles, funds);
+                MetureX(cRandom, random, particles, funds);
                 index = 0;
+                
                 particles.ForEach((p) =>
                 {
-                    
-                    p.CurrentFitness.Fitness = GetFitness(p.TestCase, stockList, data, periodStart);
-                    UpdateGBestAndGWorst(p, ref gBest, ref gWorst, experiment, iteration);
+                    swGetFitness.Start();
+                    p.CurrentFitness.Fitness = GetFitness(p.TestCase, stockList, data, periodStart, swGetMaValue, swValidation);
+                    swGetFitness.Stop();
                     #region debug
 
                     csv.WriteField($"P{index}");
                     DebugPrintParticle(csv, p.CurrentFitness);
-                    csv.WriteField($"{p.CurrentFitness.Fitness/funds*100}% ({p.CurrentFitness.Fitness}/{funds})");
+                    csv.WriteField($"{p.CurrentFitness.Fitness / funds * 100}% ({p.CurrentFitness.Fitness}/{funds})");
                     csv.NextRecord();
                     index++;
 
                     #endregion
+                });
+                
+
+                hasAnyTransaction = particles.FindAll(p => p.CurrentFitness.Fitness - funds != 0).Any();
+
+                particles.ForEach((p) =>
+                {
+                    if (hasAnyTransaction)
+                    {
+                        UpdateGBestAndGWorst(p, ref gBest, ref gWorst, experiment, iteration);
+                    }
                 });
 
                 GetLocalBestAndWorst(particles, ref localBest, ref localWorst);
@@ -158,7 +173,6 @@ namespace Stock.Analysis._0607.Service
 
                 #endregion
                 // update probability
-
                 particles.ForEach((p) =>
                 {
                     UpdateProByGN(p, gBest, localWorst);
@@ -169,7 +183,6 @@ namespace Stock.Analysis._0607.Service
                     
                 });
 
-                
                 #region debug
 
                 csv.WriteField("beta matrix");
@@ -177,17 +190,12 @@ namespace Stock.Analysis._0607.Service
                 csv.NextRecord();
 
                 #endregion
-
-                //Console.WriteLine($"{iteration} - gbest:{gBest.Fitness} " +
-                //    $"buyMa1: {GetMaNumber(gBest.BuyMa1)} " +
-                //    $"buyMa2: {GetMaNumber(gBest.BuyMa2)} " +
-                //    $"sellMa1: {GetMaNumber(gBest.SellMa1)} " +
-                //    $"sellMa2:{GetMaNumber(gBest.SellMa2)}");
-
-
-                
             }
-            
+
+            Console.WriteLine($"\nswGetFitness \t-\t {swGetFitness.Elapsed.Minutes}:{swGetFitness.Elapsed.Seconds}:{swGetFitness.Elapsed.Milliseconds}");
+            Console.WriteLine($" - sw1 \t-\t {swGetMaValue.Elapsed.Minutes}:{swGetMaValue.Elapsed.Seconds}:{swGetMaValue.Elapsed.Milliseconds}");
+            Console.WriteLine($" - sw2 \t-\t {swValidation.Elapsed.Minutes}:{swValidation.Elapsed.Seconds}:{swValidation.Elapsed.Milliseconds}");
+
             return gBest;
         }
 
@@ -300,113 +308,120 @@ namespace Stock.Analysis._0607.Service
 
         public void UpdateProbability(Particle p, StatusValue gBest, StatusValue localWorst)
         {
-            if (gBest.Fitness == 0) return;
+            if (!gBest.BuyMa1.Any()) return;
+            var deltaDigitNum = DELTA.ToString().Split('.')[1].Count();
             for (var index = 0; index < DIGIT_NUMBER; index++)
             {
                 // BuyMa1
                 if (gBest.BuyMa1[index] > localWorst.BuyMa1[index])
                 {
-                    p.BuyMa1Beta[index] = Math.Round(p.BuyMa1Beta[index] + DELTA, 3);
+                    p.BuyMa1Beta[index] = Math.Round(p.BuyMa1Beta[index] + DELTA, deltaDigitNum);
                 }
                 else if (gBest.BuyMa1[index] < localWorst.BuyMa1[index])
                 {
-                    p.BuyMa1Beta[index] = Math.Round(p.BuyMa1Beta[index] - DELTA, 3);
+                    p.BuyMa1Beta[index] = Math.Round(p.BuyMa1Beta[index] - DELTA, deltaDigitNum);
                 }
                 // BuyMa2
                 if (gBest.BuyMa2[index] > localWorst.BuyMa2[index])
                 {
-                    p.BuyMa2Beta[index] = Math.Round(p.BuyMa2Beta[index] + DELTA, 3);
+                    p.BuyMa2Beta[index] = Math.Round(p.BuyMa2Beta[index] + DELTA, deltaDigitNum);
                 }
                 else if (gBest.BuyMa2[index] < localWorst.BuyMa2[index])
                 {
-                    p.BuyMa2Beta[index] = Math.Round(p.BuyMa2Beta[index] - DELTA, 3);
+                    p.BuyMa2Beta[index] = Math.Round(p.BuyMa2Beta[index] - DELTA, deltaDigitNum);
                 }
                 // SellMa1
                 if (gBest.SellMa1[index] > localWorst.SellMa1[index])
                 {
-                    p.SellMa1Beta[index] = Math.Round(p.SellMa1Beta[index] + DELTA, 3);
+                    p.SellMa1Beta[index] = Math.Round(p.SellMa1Beta[index] + DELTA, deltaDigitNum);
                 }
                 else if (gBest.SellMa1[index] < localWorst.SellMa1[index])
                 {
-                    p.SellMa1Beta[index] = Math.Round(p.SellMa1Beta[index] - DELTA, 3);
+                    p.SellMa1Beta[index] = Math.Round(p.SellMa1Beta[index] - DELTA, deltaDigitNum);
                 }
                 // SellMa2
                 if (gBest.SellMa2[index] > localWorst.SellMa2[index])
                 {
-                    p.SellMa2Beta[index] = Math.Round(p.SellMa2Beta[index] + DELTA, 3);
+                    p.SellMa2Beta[index] = Math.Round(p.SellMa2Beta[index] + DELTA, deltaDigitNum);
                 }
                 else if (gBest.SellMa2[index] < localWorst.SellMa2[index])
                 {
-                    p.SellMa2Beta[index] = Math.Round(p.SellMa2Beta[index] - DELTA, 3);
+                    p.SellMa2Beta[index] = Math.Round(p.SellMa2Beta[index] - DELTA, deltaDigitNum);
                 }
             }
         }
 
         public void UpdateProByGN(Particle p, StatusValue gbest, StatusValue localWorst)
         {
+            if (!gbest.BuyMa1.Any()) return;
+            var deltaDigitNum = DELTA.ToString().Split('.')[1].Count();
             for (var index = 0; index < DIGIT_NUMBER; index++)
             {
                 // BuyMa1
                 if ((gbest.BuyMa1[index] > localWorst.BuyMa1[index] && p.BuyMa1Beta[index] < 0.5)
                     || (gbest.BuyMa1[index] < localWorst.BuyMa1[index] && p.BuyMa1Beta[index] > 0.5))
                 {
-                    p.BuyMa1Beta[index] = Math.Round(1 - p.BuyMa1Beta[index], 3);
+                    p.BuyMa1Beta[index] = Math.Round(1 - p.BuyMa1Beta[index], deltaDigitNum);
                 }
 
                 // BuyMa2
                 if ((gbest.BuyMa2[index] > localWorst.BuyMa2[index] && p.BuyMa2Beta[index] < 0.5)
                     || (gbest.BuyMa2[index] < localWorst.BuyMa2[index] && p.BuyMa2Beta[index] > 0.5))
                 {
-                    p.BuyMa2Beta[index] = Math.Round(1 - p.BuyMa2Beta[index], 3);
+                    p.BuyMa2Beta[index] = Math.Round(1 - p.BuyMa2Beta[index], deltaDigitNum);
                 }
 
                 // SellMa1
                 if ((gbest.SellMa1[index] > localWorst.SellMa1[index] && p.SellMa1Beta[index] < 0.5)
                     || (gbest.SellMa1[index] < localWorst.SellMa1[index] && p.SellMa1Beta[index] > 0.5))
                 {
-                    p.SellMa1Beta[index] = Math.Round(1 - p.SellMa1Beta[index], 3);
+                    p.SellMa1Beta[index] = Math.Round(1 - p.SellMa1Beta[index], deltaDigitNum);
                 }
 
                 // SellMa2
                 if ((gbest.SellMa2[index] > localWorst.SellMa2[index] && p.SellMa2Beta[index] < 0.5)
                     || (gbest.SellMa2[index] < localWorst.SellMa2[index] && p.SellMa2Beta[index] > 0.5))
                 {
-                    p.SellMa2Beta[index] = Math.Round(1 - p.SellMa2Beta[index], 3);
+                    p.SellMa2Beta[index] = Math.Round(1 - p.SellMa2Beta[index], deltaDigitNum);
                 }
             }
 
         }
+
         public int GetMaNumber(List<int> metrix) 
         {
-            return 1 + metrix[7] * 1 + metrix[6] * 2 + metrix[5] * 4 + metrix[4] * 8 + metrix[3] * 16 + metrix[2] * 32 + metrix[1] * 64 + metrix[0] * 128;
+            if (metrix.Any())
+                return 1 + metrix[7] * 1 + metrix[6] * 2 + metrix[5] * 4 + metrix[4] * 8 + metrix[3] * 16 + metrix[2] * 32 + metrix[1] * 64 + metrix[0] * 128;
+            else
+                return 0;
         }
 
-        public void MetureX(Queue<int> random, List<Particle> particles, double funds)
+        public void MetureX(Queue<int> cRandom, Random random, List<Particle> particles, double funds)
         {
             particles.ForEach((p) =>
             {
                 p.CurrentFitness.BuyMa1 = new List<int>();
                 p.BuyMa1Beta.ForEach((x) =>
                 {
-                    p.CurrentFitness.BuyMa1.Add(x >= random.Dequeue() / RANDOM_MAX ? 1 : 0);
+                    p.CurrentFitness.BuyMa1.Add(x >= cRandom.Dequeue() / RANDOM_MAX ? 1 : 0);
                 });
 
                 p.CurrentFitness.BuyMa2 = new List<int>();
                 p.BuyMa2Beta.ForEach((x) =>
                 {
-                    p.CurrentFitness.BuyMa2.Add(x >= random.Dequeue() / RANDOM_MAX ? 1 : 0);
+                    p.CurrentFitness.BuyMa2.Add(x >= cRandom.Dequeue() / RANDOM_MAX ? 1 : 0);
                 });
 
                 p.CurrentFitness.SellMa1 = new List<int>();
                 p.SellMa1Beta.ForEach((x) =>
                 {
-                    p.CurrentFitness.SellMa1.Add(x >= random.Dequeue() / RANDOM_MAX ? 1 : 0);
+                    p.CurrentFitness.SellMa1.Add(x >= cRandom.Dequeue() / RANDOM_MAX ? 1 : 0);
                 });
 
                 p.CurrentFitness.SellMa2 = new List<int>();
                 p.SellMa2Beta.ForEach((x) =>
                 {
-                    p.CurrentFitness.SellMa2.Add(x >= random.Dequeue() / RANDOM_MAX ? 1 : 0);
+                    p.CurrentFitness.SellMa2.Add(x >= cRandom.Dequeue() / RANDOM_MAX ? 1 : 0);
                 });
 
                 var buyMa1 = GetMaNumber(p.CurrentFitness.BuyMa1);
@@ -425,16 +440,27 @@ namespace Stock.Analysis._0607.Service
 
         }
 
-        public double GetFitness(TestCase currentTestCase, List<StockModel> stockList, ChartData data, DateTime periodStart)
+        public double GetFitness(
+            TestCase currentTestCase,
+            List<StockModel> stockList,
+            ChartData data,
+            DateTime periodStart,
+            Stopwatch swGetMaValue,
+            Stopwatch swValidation)
         {
-            var transactions = _researchOperationService.GetMyTransactions(data, stockList, currentTestCase, periodStart);
+            var transactions = _researchOperationService.GetMyTransactions(data, stockList, currentTestCase, periodStart, swGetMaValue, swValidation);
             var earns = _researchOperationService.GetEarningsResults(transactions);
-            return earns;
+            var result = Math.Round(earns, 10);
+            return result;
         }
     }
 
     public interface IGNQTSAlgorithmService : IAlgorithmService
     {
+        StatusValue Fit(Queue<int> cRandom, Random random, double funds, List<StockModel> stockList, ChartData data, int experiment, CsvWriter csv, DateTime periodStart);
+        double GetFitness(TestCase currentTestCase, List<StockModel> stockList, ChartData data, DateTime periodStart, Stopwatch swGetMaValue, Stopwatch swValidation);
         public void UpdateProByGN(Particle p, StatusValue gbest, StatusValue localWorst);
+        public void SetDelta(double delta);
+        void MetureX(Queue<int> cRandom, Random random, List<Particle> particles, double funds);
     }
 }

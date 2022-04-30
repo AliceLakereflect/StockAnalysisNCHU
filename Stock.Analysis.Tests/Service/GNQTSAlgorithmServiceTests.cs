@@ -5,6 +5,7 @@ using Xunit;
 using System.Collections.Generic;
 using Stock.Analysis.Tests.MockData;
 using System.Linq;
+using System.Diagnostics;
 
 namespace Stock.Analysis.Tests.Service
 {
@@ -115,7 +116,38 @@ namespace Stock.Analysis.Tests.Service
                 index++;
             });
         }
-        
+
+        [Theory]
+        [MemberData(nameof(TestData.ProbabilityParameters16), MemberType = typeof(TestData))]
+        public void TestUpdateProbability16(StatusValue best, StatusValue worst, List<double> expectBuyBeta1, List<double> expectBuyBeta2, List<double> expectSellBeta1, List<double> expectSellBeta2)
+        {
+            var particle = new Particle();
+            _qtsService.SetDelta(0.00016);
+            _qtsService.UpdateProbability(particle, best, worst);
+            
+            var index = 0;
+            Assert.All(expectBuyBeta1, d =>
+            {
+                Assert.Equal(d, particle.BuyMa1Beta[index]);
+                index++;
+            });
+            index = 0;
+            Assert.All(expectBuyBeta2, d => {
+                Assert.Equal(d, particle.BuyMa2Beta[index]);
+                index++;
+            });
+            index = 0;
+            Assert.All(expectSellBeta1, d => {
+                Assert.Equal(d, particle.SellMa1Beta[index]);
+                index++;
+            });
+            index = 0;
+            Assert.All(expectSellBeta2, d => {
+                Assert.Equal(d, particle.SellMa2Beta[index]);
+                index++;
+            });
+        }
+
         [Theory]
         [MemberData(nameof(TestData.MaMetrix), MemberType = typeof(TestData))]
         public void TestGetMaNumber(List<int> metrix, int expect)
@@ -134,10 +166,11 @@ namespace Stock.Analysis.Tests.Service
             List<Particle> particles = new List<Particle>();
             particles.Add(new Particle());
             var list = new List<int> { 1158, 24406, 21033, 31385, 7810, 15177, 27360, 11270, 5061, 18977, 20657, 10440, 25369, 6807, 30273, 31878, 32476, 21913, 8341, 22714, 4334, 669, 27165, 7081, 13774, 26165, 30449, 17304, 29439, 12003, 15962, 8765, 27825, 25647, 3476, 25716, 7837, 19448, 10194, 16947, 7217, 14856, 10115, 27328, 7149, 32235, 1236, 289, 21005, 25344, 25974, 15573, 24168, 30416, 6561, 705, 20888, 2463, 27225, 2669, 3419, 7489, 7408, 25456, 1081, 13871, 20428, 28457, 7271, 17114, 5226, 8880, 14828, 3391, 27299, 9484, 13314, 27324, 302, 7591, 14783, 7714, 24423, 18175, 27124, 8203, 23630, 6557, 8790, 16750, 1747, 9035, 18907, 23664, 25425, 24194, 6759, 1917, 8792, 7714, 11688, 32408, 13487, 24933, 20798, 14063, 24729, 9238, 26144, 20659, 15448, 32510, 20283, 23334, 12784, 11424, 13148, 7926, 28717, 17958, 5711, 25289, 27879, 19610, 3401, 24089, 23685, 21081, 4739, 20034, 17088 };
-            var random = new Queue<int>();
-            list.ForEach(i=> random.Enqueue(i));
+            var random = new Random();
+            var cRandom = new Queue<int>();
+            list.ForEach(i => cRandom.Enqueue(i));
 
-            _qtsService.MetureX(random, particles, 10000000);
+            _qtsService.MetureX(cRandom, random, particles, 10000000);
 
             var result = particles.First().CurrentFitness;
             var index = 0;
@@ -190,9 +223,10 @@ namespace Stock.Analysis.Tests.Service
             chartData.Timestamp = dataList.Select(s => s.Date).ToList();
             chartData.MaList.Add(5, _movingAvarageService.CalculateMovingAvarage(dataList, 5).Select(s => s.Price).ToList());
             chartData.MaList.Add(20, _movingAvarageService.CalculateMovingAvarage(dataList, 20).Select(s => s.Price).ToList());
-            var result = _qtsService.GetFitness(testCase, dataList, chartData, periodStart);
+            Stopwatch sw = new Stopwatch();
+            var result = _qtsService.GetFitness(testCase, dataList, chartData, periodStart, sw, sw);
 
-            Assert.Equal(1297974, Math.Round(result));
+            Assert.Equal(1297974 + testCase.Funds, Math.Round(result));
         }
 
         [Theory]
@@ -266,6 +300,30 @@ namespace Stock.Analysis.Tests.Service
                     new List<double> { 0.497, 0.503, 0.5, 0.497, 0.5, 0.503, 0.497, 0.497 },
                     new List<double> { 0.497, 0.503, 0.5, 0.497, 0.5, 0.503, 0.497, 0.497 },
                     new List<double> { 0.497, 0.503, 0.5, 0.497, 0.5, 0.503, 0.497, 0.497 }
+                },
+            };
+
+            public static IEnumerable<object[]> ProbabilityParameters16 =>
+            new List<object[]>
+            {
+                new object[] {
+                    new StatusValue {
+                        BuyMa1 = new List<int> { 1, 0, 0, 0, 1, 1, 0, 1 },
+                        BuyMa2 = new List<int> { 0, 1, 0, 0, 1, 1, 0, 0 },
+                        SellMa1 = new List<int> { 0, 1, 0, 0, 1, 1, 0, 0 },
+                        SellMa2 = new List<int> { 0, 1, 0, 0, 1, 1, 0, 0 },
+                        Fitness = 1
+                    },
+                    new StatusValue {
+                        BuyMa1 = new List<int> { 1, 1, 0, 0, 1, 0, 1, 1 },
+                        BuyMa2 = new List<int> { 1, 0, 0, 1, 1, 0, 1, 1 },
+                        SellMa1 = new List<int> { 1, 0, 0, 1, 1, 0, 1, 1 },
+                        SellMa2 = new List<int> { 1, 0, 0, 1, 1, 0, 1, 1 }
+                    },
+                    new List<double> { 0.5, 0.49984, 0.5, 0.5, 0.5, 0.50016, 0.49984, 0.5 },
+                    new List<double> { 0.49984, 0.50016, 0.5, 0.49984, 0.5, 0.50016, 0.49984, 0.49984 },
+                    new List<double> { 0.49984, 0.50016, 0.5, 0.49984, 0.5, 0.50016, 0.49984, 0.49984 },
+                    new List<double> { 0.49984, 0.50016, 0.5, 0.49984, 0.5, 0.50016, 0.49984, 0.49984 }
                 },
             };
 

@@ -1,12 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using CsvHelper;
 using Stock.Analysis._0607.Models;
 
 namespace Stock.Analysis._0607.Service
 {
-    public class QTSAlgorithmService: IAlgorithmService
+    public interface IQTSAlgorithmService : IAlgorithmService
+    {
+        StatusValue Fit(Random random, double funds, List<StockModel> stockList, ChartData data, int experiment, CsvWriter csv, DateTime periodStart);
+        double GetFitness(TestCase currentTestCase, List<StockModel> stockList, ChartData data, DateTime periodStart);
+        void MeatureX(Random random, List<Particle> particles, double funds);
+    }
+
+    public class QTSAlgorithmService: IQTSAlgorithmService
     {
         private static IResearchOperationService _researchOperationService = new ResearchOperationService();
         // QTS paremeters
@@ -32,7 +40,7 @@ namespace Stock.Analysis._0607.Service
             };
         }
 
-        public StatusValue Fit(Queue<int> random, double funds, List<StockModel> stockList, ChartData data, int experiment, CsvWriter csv, DateTime periodStart)
+        public StatusValue Fit(Random random, double funds, List<StockModel> stockList, ChartData data, int experiment, CsvWriter csv, DateTime periodStart)
         {
             var iteration = 0;
             
@@ -55,7 +63,7 @@ namespace Stock.Analysis._0607.Service
                 particles.Add(new Particle());
             }
 
-            MetureX(random, particles, funds);
+            MeatureX(random, particles, funds);
 
             var first = true;
             var index = 0;
@@ -124,7 +132,7 @@ namespace Stock.Analysis._0607.Service
                 csv.NextRecord();
 
                 #endregion
-                MetureX(random, particles, funds);
+                MeatureX(random, particles, funds);
                 index = 0;
                 particles.ForEach((p) =>
                 {
@@ -333,35 +341,38 @@ namespace Stock.Analysis._0607.Service
 
         public int GetMaNumber(List<int> metrix) 
         {
-            return 1 + metrix[7] * 1 + metrix[6] * 2 + metrix[5] * 4 + metrix[4] * 8 + metrix[3] * 16 + metrix[2] * 32 + metrix[1] * 64 + metrix[0] * 128;
+            if (metrix.Any())
+                return 1 + metrix[7] * 1 + metrix[6] * 2 + metrix[5] * 4 + metrix[4] * 8 + metrix[3] * 16 + metrix[2] * 32 + metrix[1] * 64 + metrix[0] * 128;
+            else
+                return 0;
         }
 
-        public void MetureX(Queue<int> random, List<Particle> particles, double funds)
+        public void MeatureX(Random random, List<Particle> particles, double funds)
         {
             particles.ForEach((p) =>
             {
                 p.CurrentFitness.BuyMa1 = new List<int>();
                 p.BuyMa1Beta.ForEach((x) =>
                 {
-                    p.CurrentFitness.BuyMa1.Add(x >= random.Dequeue() / RANDOM_MAX ? 1 : 0);
+                    p.CurrentFitness.BuyMa1.Add(x >= random.Next() / RANDOM_MAX ? 1 : 0);
                 });
 
                 p.CurrentFitness.BuyMa2 = new List<int>();
                 p.BuyMa2Beta.ForEach((x) =>
                 {
-                    p.CurrentFitness.BuyMa2.Add(x >= random.Dequeue() / RANDOM_MAX ? 1 : 0);
+                    p.CurrentFitness.BuyMa2.Add(x >= random.Next() / RANDOM_MAX ? 1 : 0);
                 });
 
                 p.CurrentFitness.SellMa1 = new List<int>();
                 p.SellMa1Beta.ForEach((x) =>
                 {
-                    p.CurrentFitness.SellMa1.Add(x >= random.Dequeue() / RANDOM_MAX ? 1 : 0);
+                    p.CurrentFitness.SellMa1.Add(x >= random.Next() / RANDOM_MAX ? 1 : 0);
                 });
 
                 p.CurrentFitness.SellMa2 = new List<int>();
                 p.SellMa2Beta.ForEach((x) =>
                 {
-                    p.CurrentFitness.SellMa2.Add(x >= random.Dequeue() / RANDOM_MAX ? 1 : 0);
+                    p.CurrentFitness.SellMa2.Add(x >= random.Next() / RANDOM_MAX ? 1 : 0);
                 });
 
                 var buyMa1 = GetMaNumber(p.CurrentFitness.BuyMa1);
@@ -382,7 +393,8 @@ namespace Stock.Analysis._0607.Service
 
         public double GetFitness(TestCase currentTestCase, List<StockModel> stockList, ChartData data, DateTime periodStart)
         {
-            var transactions = _researchOperationService.GetMyTransactions(data, stockList, currentTestCase, periodStart);
+            Stopwatch sw = new Stopwatch();
+            var transactions = _researchOperationService.GetMyTransactions(data, stockList, currentTestCase, periodStart, sw, sw);
             var earns = _researchOperationService.GetEarningsResults(transactions);
             return earns;
         }

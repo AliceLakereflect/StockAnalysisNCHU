@@ -2,7 +2,7 @@
 {
     public class SlidingWindow
     {
-        Period TrainPeriod { get; set; }
-        Period TestPeriod { get; set; }
+        public Period TrainPeriod { get; set; } = new Period();
+        public Period TestPeriod { get; set; } = new Period();
     }
 }
