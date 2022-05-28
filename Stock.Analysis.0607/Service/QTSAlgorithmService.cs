@@ -9,8 +9,8 @@ namespace Stock.Analysis._0607.Service
 {
     public interface IQTSAlgorithmService : IAlgorithmService
     {
-        StatusValue Fit(Random random, double funds, List<StockModel> stockList, ChartData data, int experiment, CsvWriter csv, DateTime periodStart);
-        double GetFitness(TestCase currentTestCase, List<StockModel> stockList, ChartData data, DateTime periodStart);
+        StatusValue Fit(Random random, double funds, List<StockModel> stockList, ChartData data, int experiment, CsvWriter csv, double periodStartTimeStamp);
+        double GetFitness(TestCase currentTestCase, List<StockModel> stockList, double periodStartTimeStamp);
         void MeatureX(Random random, List<Particle> particles, double funds);
     }
 
@@ -40,7 +40,7 @@ namespace Stock.Analysis._0607.Service
             };
         }
 
-        public StatusValue Fit(Random random, double funds, List<StockModel> stockList, ChartData data, int experiment, CsvWriter csv, DateTime periodStart)
+        public StatusValue Fit(Random random, double funds, List<StockModel> stockList, ChartData data, int experiment, CsvWriter csv, double periodStartTimeStamp)
         {
             var iteration = 0;
             
@@ -70,7 +70,7 @@ namespace Stock.Analysis._0607.Service
             particles.ForEach((p) =>
             {
                 
-                p.CurrentFitness.Fitness = GetFitness(p.TestCase, stockList, data, periodStart);
+                p.CurrentFitness.Fitness = GetFitness(p.TestCase, stockList, periodStartTimeStamp);
                 #region debug
 
                 csv.WriteField($"P{index}");
@@ -137,7 +137,7 @@ namespace Stock.Analysis._0607.Service
                 particles.ForEach((p) =>
                 {
                     
-                    p.CurrentFitness.Fitness = GetFitness(p.TestCase, stockList, data, periodStart);
+                    p.CurrentFitness.Fitness = GetFitness(p.TestCase, stockList, periodStartTimeStamp);
                     UpdateGBestAndGWorst(p, ref gBest, ref gWorst, experiment, iteration);
                     #region debug
 
@@ -383,10 +383,10 @@ namespace Stock.Analysis._0607.Service
 
         }
 
-        public double GetFitness(TestCase currentTestCase, List<StockModel> stockList, ChartData data, DateTime periodStart)
+        public double GetFitness(TestCase currentTestCase, List<StockModel> stockList, double periodStartTimeStamp)
         {
             Stopwatch sw = new Stopwatch();
-            var transactions = _researchOperationService.GetMyTransactions(stockList, currentTestCase, periodStart, sw, sw);
+            var transactions = _researchOperationService.GetMyTransactions(stockList, currentTestCase, periodStartTimeStamp, sw, sw);
             var earns = _researchOperationService.GetEarningsResults(transactions);
             return earns;
         }

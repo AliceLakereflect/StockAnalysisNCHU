@@ -11,6 +11,6 @@ namespace Stock.Analysis._0607.Service
         void CalculateAllMa(ref List<StockModel> stockList);
         List<StockTransaction> ProfitSettlement(double currentStock, List<StockModel> stockList, TestCase testCase, List<StockTransaction> myTrans, double periodEnd);
         double GetEarningsResults(List<StockTransaction> myTrans);
-        List<StockTransaction> GetMyTransactions(List<StockModel> stockList, TestCase testCase, DateTime periodStart, Stopwatch swGetMaValue, Stopwatch swValidation);
+        List<StockTransaction> GetMyTransactions(List<StockModel> stockList, TestCase testCase, double periodStartTimeStamp, Stopwatch swGetMaValue, Stopwatch swValidation);
     }
 }

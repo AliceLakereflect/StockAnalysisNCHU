@@ -95,7 +95,7 @@ namespace Stock.Analysis._0607.Service
         public List<StockTransaction> GetMyTransactions(
             List<StockModel> stockList,
             TestCase testCase,
-            DateTime periodStart,
+            double periodStartTimeStamp,
             Stopwatch sw1,
             Stopwatch sw2)
         {
@@ -114,27 +114,25 @@ namespace Stock.Analysis._0607.Service
             var index = 0;
 
             bool hasQty = false;
-            var periodStartTimeStamp = Utils.ConvertToUnixTimestamp(periodStart);
             double? prevBuyShortMa = null, prevBuyLongMaVal = null, prevSellShortMaVal = null, prevSellLongMaVal = null;
+            sw1.Start();
             stockList.ForEach(stock =>
             {
-                var buyShortMaVal = GetMaValue(testCase.BuyShortTermMa, stock);
+                sw2.Start();
+                var buyShortMaVal = GetMaValue(testCase.BuyShortTermMa,stock);
                 var buyLongMaVal = GetMaValue(testCase.BuyLongTermMa, stock);
                 var sellShortMa = GetMaValue(testCase.SellShortTermMa, stock);
                 var sellLongMaVal = GetMaValue(testCase.SellLongTermMa, stock);
                 if (stock.Date > periodStartTimeStamp)
                 {
-                    
                     var price = stock.Price ?? 0;
-                    sw1.Start();
-                    bool test1 = _transTimingService.TimeToBuy(buyShortMaVal, buyLongMaVal, prevBuyShortMa, prevBuyLongMaVal, index, hasQty);
-                    sw1.Stop();
-
-                    sw2.Start();
-                    bool test2 = _transTimingService.TimeToSell(sellShortMa, sellLongMaVal, prevSellShortMaVal, prevSellLongMaVal, index, hasQty);
-                    sw2.Stop();
-                    if (buyShortMaVal != null && buyLongMaVal != null && test1)
+                    
+                    bool testToBuy = _transTimingService.TimeToBuy(buyShortMaVal, buyLongMaVal, prevBuyShortMa, prevBuyLongMaVal, index, hasQty);
+                    bool testToSell = _transTimingService.TimeToSell(sellShortMa, sellLongMaVal, prevSellShortMaVal, prevSellLongMaVal, index, hasQty);
+                    
+                    if (buyShortMaVal != null && buyLongMaVal != null && testToBuy)
                     {
+                        
                         var volume = _calculateVolumeService.CalculateBuyingVolumeOddShares(lastTrans.Balance, price);
                         lastTrans = new StockTransaction
                         {
@@ -150,10 +148,11 @@ namespace Stock.Analysis._0607.Service
                         };
                         myTransactions.Add(lastTrans);
                         hasQty = !hasQty;
+                        
                     }
                     // todo: 停損比例改為參數，從testcase丟進來
                     // todo: 注意現在是用哪一種時機點
-                    else if (sellShortMa != null && sellLongMaVal != null && test2)
+                    else if (sellShortMa != null && sellLongMaVal != null && testToSell)
                     {
                         var volume = _calculateVolumeService.CalculateSellingVolume(myTransactions.LastOrDefault().TransVolume);
                         lastTrans = new StockTransaction
@@ -171,15 +170,14 @@ namespace Stock.Analysis._0607.Service
                         myTransactions.Add(lastTrans);
                         hasQty = !hasQty;
                     }
-
-                    
                 }
+
                 prevBuyShortMa = buyShortMaVal;
                 prevBuyLongMaVal = buyLongMaVal;
                 prevSellShortMaVal = sellShortMa;
                 prevSellLongMaVal = sellLongMaVal;
-
                 index++;
+                sw2.Stop();
             });
             sw1.Stop();
 
@@ -192,15 +190,9 @@ namespace Stock.Analysis._0607.Service
 
         public double? GetMaValue(int avgDay, StockModel stock)
         {
-            return 0.0;
-            //if (stock.MaList.ContainsKey(avgDay))
-            //{
-            //    return stock.MaList[avgDay];
-            //}
-            //else
-            //{
-            //    throw new NullReferenceException($"Missin Ma {avgDay} on {stock.Date}");
-            //}
+            var data = typeof(StockModel).GetProperty($"Ma{avgDay}").GetValue(stock);
+            var ma = Convert.ToDouble(data);
+            return ma == 0 ? null : ma ;
         }
     }
 }

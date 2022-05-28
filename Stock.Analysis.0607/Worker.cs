@@ -90,15 +90,17 @@ namespace Stock.Analysis._0607
 
                 var stockList = _dataService.GetStockDataFromDb(SYMBOL, window.TestPeriod.Start.AddDays(-7), window.TestPeriod.End.AddDays(1));
                 var copyCRandom = new Queue<int>(cRandom);
-                StatusValue bestGbest = Train(myTransList, copyCRandom, random, stockList, periodStart);
-                Test(bestGbest, stockList, periodStart);
+                var periodStartTimeStamp = Utils.ConvertToUnixTimestamp(periodStart);
+                StatusValue bestGbest = Train(myTransList, copyCRandom, random, stockList, periodStartTimeStamp);
+                Test(bestGbest, stockList, periodStartTimeStamp);
             });
         }
 
         #region private method
-        private static void Test(StatusValue bestGbest, List<StockModel> stockList, DateTime periodStart)
+
+        private static void Test(StatusValue bestGbest, List<StockModel> stockList, double periodStartTimeStamp)
         {
-            GetTransactionsAndOutput(periodStart, stockList, bestGbest, "Test");
+            GetTransactionsAndOutput(periodStartTimeStamp, stockList, bestGbest, "Test");
         }
 
         private static StatusValue Train(
@@ -106,7 +108,7 @@ namespace Stock.Analysis._0607
             Queue<int> copyCRandom,
             Random random,
             List<StockModel> stockList,
-            DateTime periodStart
+            double periodStartTimeStamp
             )
         {
             StatusValue bestGbest = new StatusValue();
@@ -114,7 +116,7 @@ namespace Stock.Analysis._0607
 
             for (var e = 0; e < EXPERIMENT_NUMBER; e++)
             {
-                Console.WriteLine("Begin:\n");
+                Console.WriteLine("\nBegin:\n");
                 Stopwatch swFit = new Stopwatch();
                 var path = Path.Combine(Environment.CurrentDirectory, $"Output/50 Experements/debug G best transaction exp: {e} - C random.csv");
                 StatusValue gBest = new StatusValue();
@@ -122,25 +124,26 @@ namespace Stock.Analysis._0607
                 using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture, false))
                 {
                     swFit.Start();
-                    gBest = _qtsAlgorithmService.Fit(copyCRandom, random, FUNDS, stockList, e, csv, periodStart);
+                    
+                    gBest = _qtsAlgorithmService.Fit(copyCRandom, random, FUNDS, stockList, e, csv, periodStartTimeStamp);
                     swFit.Stop();
                 }
                 Console.WriteLine($"{e}: {gBest.Fitness} => {swFit.Elapsed.Minutes}:{swFit.Elapsed.Seconds}:{swFit.Elapsed.Milliseconds}");
                 swFit.Reset();
                 CompareGBestByBits(ref bestGbest, ref gBestCount, gBest);
 
-                OutputEachExperiment(periodStart, stockList, myTransList, e, gBest);
+                OutputEachExperiment(periodStartTimeStamp, stockList, myTransList, e, gBest);
             }
 
             if (bestGbest.BuyMa1.Count > 0)
             {
-                GetTransactionsAndOutput(periodStart, stockList, bestGbest, "Train", gBestCount);
+                GetTransactionsAndOutput(periodStartTimeStamp, stockList, bestGbest, "Train", gBestCount);
             }
 
             return bestGbest;
         }
 
-        private static void GetTransactionsAndOutput(DateTime periodStart, List<StockModel> stockList, StatusValue bestGbest, string mode, int gBestCount = 0)
+        private static void GetTransactionsAndOutput(double periodStart, List<StockModel> stockList, StatusValue bestGbest, string mode, int gBestCount = 0)
         {
             var testCase = new TestCase
             {
@@ -155,7 +158,7 @@ namespace Stock.Analysis._0607
             var a = _qtsAlgorithmService.GetConst();
             a.EXPERIMENT_NUMBER = EXPERIMENT_NUMBER;
             _fileHandler.OutputQTSResult(a, FUNDS, bestGbest, gBestCount, t,
-                $"M2M/GNQTS {mode} - Crandom - {periodStart.Year}_{periodStart.Month}");
+                $"M2M/GNQTS {mode} - Crandom - {periodStart}");
         }
 
         private static void CompareGBestByBits(ref StatusValue bestGbest, ref int gBestCount, StatusValue gBest)
@@ -186,7 +189,7 @@ namespace Stock.Analysis._0607
             if (bestGbest.Fitness == gBest.Fitness) gBestCount++;
         }
 
-        private static void OutputEachExperiment(DateTime periodStart, List<StockModel> stockList, List<StockTransList> myTransList, int e, StatusValue gBest)
+        private static void OutputEachExperiment(double periodStart, List<StockModel> stockList, List<StockTransList> myTransList, int e, StatusValue gBest)
         {
             var gBestTestCase = new TestCase
             {
@@ -203,7 +206,7 @@ namespace Stock.Analysis._0607
             // Output csv file
             var algorithmConst = _qtsAlgorithmService.GetConst();
             algorithmConst.EXPERIMENT_NUMBER = e;
-            _fileHandler.OutputQTSResult(algorithmConst, FUNDS, gBest, 0, transactions, $"50 Experements/G best transaction {e} - {periodStart.Year} - {periodStart.Month}");
+            _fileHandler.OutputQTSResult(algorithmConst, FUNDS, gBest, 0, transactions, $"50 Experements/G best transaction {e} - {periodStart}");
         }
 
         private static void PrintTransactions(
