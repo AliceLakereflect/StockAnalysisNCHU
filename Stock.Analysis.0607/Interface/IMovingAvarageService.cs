@@ -5,6 +5,6 @@ namespace Stock.Analysis._0607.Service
 {
     public interface IMovingAvarageService
     {
-        List<StockModel?> CalculateMovingAvarage(List<StockModel> stockList, int avgDay);
+        List<StockModel> CalculateMovingAvarage(List<StockModel> stockList, int avgDay);
     }
 }

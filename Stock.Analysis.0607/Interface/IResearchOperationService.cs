@@ -8,9 +8,9 @@ namespace Stock.Analysis._0607.Service
     public interface IResearchOperationService
     {
         List<ChartData> CalculateMaFromCsv(string path);
-        ChartData GetMaFromYahoo(string symbol, List<StockModel> stockList, double start, double end);
+        void CalculateAllMa(ref List<StockModel> stockList);
         List<StockTransaction> ProfitSettlement(double currentStock, List<StockModel> stockList, TestCase testCase, List<StockTransaction> myTrans, double periodEnd);
         double GetEarningsResults(List<StockTransaction> myTrans);
-        List<StockTransaction> GetMyTransactions(ChartData data, List<StockModel> stockList, TestCase testCase, DateTime periodStart, Stopwatch swGetMaValue, Stopwatch swValidation);
+        List<StockTransaction> GetMyTransactions(List<StockModel> stockList, TestCase testCase, DateTime periodStart, Stopwatch swGetMaValue, Stopwatch swValidation);
     }
 }

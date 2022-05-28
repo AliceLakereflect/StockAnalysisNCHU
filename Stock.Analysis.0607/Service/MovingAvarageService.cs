@@ -14,11 +14,9 @@ namespace Stock.Analysis._0607.Service
 
         public List<StockModel> CalculateMovingAvarage(List<StockModel> stockList, int avgDay)
         {
-            //Console.WriteLine($"Calculating {avgDay}-day moving avarage...");
-            var avgList = new List<StockModel>();
             var sortedStock = stockList.OrderByDescending(s => s.Date).ToList();
             double? firstSum = 0;
-            if (stockList.Count < avgDay) { return avgList; }
+            if (stockList.Count < avgDay) { return stockList; }
             for (var i = 0; i < avgDay; i++)
             {
                 firstSum += sortedStock[i].Price;
@@ -26,6 +24,8 @@ namespace Stock.Analysis._0607.Service
 
             var index = 0;
             double? prePrice = 0;
+            var maProperty = typeof(StockModel).GetProperty($"Ma{avgDay}");
+
             sortedStock.ForEach(stock =>
             {
                 double? sumPrice = 0;
@@ -41,15 +41,12 @@ namespace Stock.Analysis._0607.Service
                         : prePrice;
                 }
 
-                avgList.Add(new StockModel
-                {
-                    Date = stock.Date,
-                    Price = sumPrice == 0 ? null : (double)Math.Round(((decimal)sumPrice) / avgDay, 10, MidpointRounding.AwayFromZero)
-                });
+                maProperty.SetValue(stock, sumPrice == 0 ? null : (double)Math.Round(((decimal)sumPrice) / avgDay, 10, MidpointRounding.AwayFromZero));
+                
                 prePrice = sumPrice;
                 index++;
             });
-            return avgList.OrderBy(s => s.Date).ToList();
+            return sortedStock;
         }
     }
 }

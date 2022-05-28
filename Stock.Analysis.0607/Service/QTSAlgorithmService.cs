@@ -386,7 +386,7 @@ namespace Stock.Analysis._0607.Service
         public double GetFitness(TestCase currentTestCase, List<StockModel> stockList, ChartData data, DateTime periodStart)
         {
             Stopwatch sw = new Stopwatch();
-            var transactions = _researchOperationService.GetMyTransactions(data, stockList, currentTestCase, periodStart, sw, sw);
+            var transactions = _researchOperationService.GetMyTransactions(stockList, currentTestCase, periodStart, sw, sw);
             var earns = _researchOperationService.GetEarningsResults(transactions);
             return earns;
         }

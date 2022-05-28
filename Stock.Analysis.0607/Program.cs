@@ -2,6 +2,10 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
+using Stock.Analysis._0607.Repository;
+using Microsoft.EntityFrameworkCore;
+using Stock.Analysis._0607.Interface;
+using Stock.Analysis._0607.Models;
 
 namespace Stock.Analysis._0607
 {
@@ -32,7 +36,15 @@ namespace Stock.Analysis._0607
             services.AddSingleton<IMovingAvarageService, MovingAvarageService>();
             services.AddSingleton<ITransTimingService, TransTimingService>();
             services.AddSingleton<ICalculateVolumeService, CalculateVolumeService>();
-        }
 
+            // DbContext
+            var connectString = "Host=localhost;Database=StockResearch;Username=postgres;Password=13";
+            services.AddDbContext<StockModelDbContext>(options => options.UseNpgsql(connectString));
+            services.AddScoped<IDataProvider<StockModel>, StockModelDataProvider>();
+
+            // automapper
+            services.AddAutoMapper(typeof(StockModel));
+
+        }
     }
 }

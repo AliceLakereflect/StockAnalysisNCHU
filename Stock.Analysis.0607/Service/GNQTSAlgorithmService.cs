@@ -38,7 +38,7 @@ namespace Stock.Analysis._0607.Service
             DELTA = delda;
         }
 
-        public StatusValue Fit(Queue<int> cRandom, Random random, double funds, List<StockModel> stockList, ChartData data, int experiment, CsvWriter csv, DateTime periodStart)
+        public StatusValue Fit(Queue<int> cRandom, Random random, double funds, List<StockModel> stockList, int experiment, CsvWriter csv, DateTime periodStart)
         {
             Stopwatch swGetFitness = new Stopwatch();
             Stopwatch swGetMaValue = new Stopwatch();
@@ -70,7 +70,7 @@ namespace Stock.Analysis._0607.Service
             var index = 0;
             particles.ForEach((p) =>
             {
-                p.CurrentFitness.Fitness = GetFitness(p.TestCase, stockList, data, periodStart, swGetMaValue, swValidation);
+                p.CurrentFitness.Fitness = GetFitness(p.TestCase, stockList, periodStart, swGetMaValue, swValidation);
                 #region debug
 
                 csv.WriteField($"P{index}");
@@ -137,7 +137,7 @@ namespace Stock.Analysis._0607.Service
                 particles.ForEach((p) =>
                 {
                     swGetFitness.Start();
-                    p.CurrentFitness.Fitness = GetFitness(p.TestCase, stockList, data, periodStart, swGetMaValue, swValidation);
+                    p.CurrentFitness.Fitness = GetFitness(p.TestCase, stockList, periodStart, swGetMaValue, swValidation);
                     swGetFitness.Stop();
                     #region debug
 
@@ -435,12 +435,11 @@ namespace Stock.Analysis._0607.Service
         public double GetFitness(
             TestCase currentTestCase,
             List<StockModel> stockList,
-            ChartData data,
             DateTime periodStart,
             Stopwatch swGetMaValue,
             Stopwatch swValidation)
         {
-            var transactions = _researchOperationService.GetMyTransactions(data, stockList, currentTestCase, periodStart, swGetMaValue, swValidation);
+            var transactions = _researchOperationService.GetMyTransactions(stockList, currentTestCase, periodStart, swGetMaValue, swValidation);
             var earns = _researchOperationService.GetEarningsResults(transactions);
             var result = Math.Round(earns, 10);
             return result;
@@ -449,8 +448,8 @@ namespace Stock.Analysis._0607.Service
 
     public interface IGNQTSAlgorithmService : IAlgorithmService
     {
-        StatusValue Fit(Queue<int> cRandom, Random random, double funds, List<StockModel> stockList, ChartData data, int experiment, CsvWriter csv, DateTime periodStart);
-        double GetFitness(TestCase currentTestCase, List<StockModel> stockList, ChartData data, DateTime periodStart, Stopwatch swGetMaValue, Stopwatch swValidation);
+        StatusValue Fit(Queue<int> cRandom, Random random, double funds, List<StockModel> stockList, int experiment, CsvWriter csv, DateTime periodStart);
+        double GetFitness(TestCase currentTestCase, List<StockModel> stockList, DateTime periodStart, Stopwatch swGetMaValue, Stopwatch swValidation);
         public void UpdateProByGN(Particle p, StatusValue gbest, StatusValue localWorst);
         public void SetDelta(double delta);
         void MetureX(Queue<int> cRandom, Random random, List<Particle> particles, double funds);

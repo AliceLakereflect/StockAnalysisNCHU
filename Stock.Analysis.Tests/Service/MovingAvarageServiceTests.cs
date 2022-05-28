@@ -6,11 +6,13 @@ using System.Linq;
 using Stock.Analysis._0607.Models;
 using Stock.Analysis.Tests.MockData;
 using Moq;
+using Stock.Analysis._0607.Interface;
 
 namespace Stock.Analysis.Tests.Service
 {
     public class MovingAvarageServiceTests
     {
+        private IDataProvider<StockModel> _stockModeldataProvider = new Mock<IDataProvider<StockModel>>().Object;
         private IMovingAvarageService _movingAvgService = new MovingAvarageService();
         private List<double> ma5FromYahoo = new List<double> { 95.26, 100.24, 106.5, 110.52, 112.9, 114.4, 115.5, 114.4, 115.9, 121, 124.6,
             128.7, 134, 139.6, 143.1, 144.1, 147.2, 151.2, 156, 161.2, 172.9
@@ -198,7 +200,7 @@ namespace Stock.Analysis.Tests.Service
         [Fact]
         public void TestWithRealData()
         {
-            var dataService = new DataService();
+            var dataService = new DataService(_stockModeldataProvider);
             var dataList = dataService.GetPeriodDataFromYahooApi("2603.TW", new DateTime(2021,3,1), new DateTime(2021,7,1));
             var filehandler = new FileHandler();
             filehandler.OutputCsv(dataList, "Price");

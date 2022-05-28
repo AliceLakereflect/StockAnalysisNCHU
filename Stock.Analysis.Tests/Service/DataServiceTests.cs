@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Linq;
+using Moq;
 using Newtonsoft.Json;
+using Stock.Analysis._0607.Interface;
 using Stock.Analysis._0607.Models;
 using Stock.Analysis._0607.Service;
 using Xunit;
@@ -9,9 +11,11 @@ namespace Stock.Analysis.Tests.Service
 {
     public class DataServiceTests
     {
-        private IDataService _dataService = new DataService();
+        private IDataProvider<StockModel> _stockModeldataProvider = new Mock<IDataProvider<StockModel>>().Object;
+        private IDataService _dataService;
         public DataServiceTests()
         {
+            _dataService = new DataService(_stockModeldataProvider);
         }
 
         [Fact]

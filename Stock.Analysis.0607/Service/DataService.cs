@@ -3,15 +3,19 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using AutoMapper;
 using Newtonsoft.Json;
+using Stock.Analysis._0607.Interface;
 using Stock.Analysis._0607.Models;
 
 namespace Stock.Analysis._0607.Service
 {
     public class DataService: IDataService
     {
-        public DataService()
+        IDataProvider<StockModel> _stockModeldataProvider;
+        public DataService(IDataProvider<StockModel> stockModeldataProvider)
         {
+            _stockModeldataProvider = stockModeldataProvider ?? throw new ArgumentNullException(nameof(stockModeldataProvider));
         }
 
         public static double ConvertToUnixTimestamp(DateTime date)
@@ -21,7 +25,7 @@ namespace Stock.Analysis._0607.Service
             return Math.Floor(diff.TotalSeconds);
         }
 
-        private static void ParseResult(List<StockModel> result, YahooFinanceChartDataModel data)
+        private static void ParseResult(List<StockModel> result, YahooFinanceChartDataModel data, string stockSymbol)
         {
             var timestamps = data?.chart?.result?.First()?.timestamp;
             var closeStockValue = data?.chart?.result?.First()?.indicators?.quote?.First()?["close"];
@@ -33,9 +37,10 @@ namespace Stock.Analysis._0607.Service
                 {
                     result.Add(new StockModel
                     {
+                        StockName = stockSymbol,
                         Date = timestamp,
                         //Price = Math.Round(price, 2, MidpointRounding.AwayFromZero)
-                        Price = closeStockValue.ElementAt(index)
+                        Price = price = Math.Round((double)closeStockValue.ElementAt(index), 6, MidpointRounding.AwayFromZero)
                     });
                 }
                 index++;
@@ -50,7 +55,7 @@ namespace Stock.Analysis._0607.Service
             var timestamp2 = ConvertToUnixTimestamp(period2);
             var url = $"https://query1.finance.yahoo.com/v8/finance/chart/{stockSymbol}?period1={timestamp1}&period2={timestamp2}&interval=1d";
             var data = JsonConvert.DeserializeObject<YahooFinanceChartDataModel>(SendGetRequest(url));
-            ParseResult(result, data);
+            ParseResult(result, data, stockSymbol);
 
             return result;
         }
@@ -60,7 +65,7 @@ namespace Stock.Analysis._0607.Service
             var result = new List<StockModel>();
             var url = $"https://query1.finance.yahoo.com/v8/finance/chart/{stockSymbol}?range=1y&interval=1d";
             var data = JsonConvert.DeserializeObject<YahooFinanceChartDataModel>(SendGetRequest(url));
-            ParseResult(result, data);
+            ParseResult(result, data, stockSymbol);
 
             return result;
         }
@@ -72,7 +77,7 @@ namespace Stock.Analysis._0607.Service
             var result = new List<StockModel>();
             var url = $"https://query1.finance.yahoo.com/v8/finance/chart/{stockSymbol}";
             var data = JsonConvert.DeserializeObject<YahooFinanceChartDataModel>(SendGetRequest(url));
-            ParseResult(result, data);
+            ParseResult(result, data, stockSymbol);
 
             return result;
         }
@@ -109,6 +114,17 @@ namespace Stock.Analysis._0607.Service
             response.Close();
 
             return responseFromServer;
+        }
+
+        public List<StockModel> GetStockDataFromDb(string stockSymbol, DateTime period1, DateTime period2)
+        {
+            var stockModels = _stockModeldataProvider.GetAll(stockSymbol);
+            var query = from stockModel in stockModels
+                        where stockModel.StockName == stockSymbol
+                            && stockModel.Date > period1.Subtract(new DateTime(1970, 1, 1)).TotalSeconds && stockModel.Date < period2.Subtract(new DateTime(1970, 1, 1)).TotalSeconds
+                            select stockModel;
+
+            return query.ToList();
         }
     }
 }
