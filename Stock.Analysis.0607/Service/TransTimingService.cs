@@ -25,9 +25,9 @@ namespace Stock.Analysis._0607.Service
         }
 
         // 黃金交叉
-        public bool TimeToBuy(double? shortMaVal, double? longMaVal, double? prevShortMaVal, double? prevLongMaVal, int index, bool hasQty)
+        public bool TimeToBuy(double? shortMaVal, double? longMaVal, double? prevShortMaVal, double? prevLongMaVal, bool hasQty)
         {
-            var check = index != 0 && prevShortMaVal <= prevLongMaVal;
+            var check = prevShortMaVal <= prevLongMaVal;
             return shortMaVal > longMaVal && hasQty == false && check;
         }
 
@@ -52,9 +52,9 @@ namespace Stock.Analysis._0607.Service
         }
 
         // 死亡交叉
-        public bool TimeToSell(double? shortMaVal, double? longMaVal, double? prevShortMaVal, double? prevLongMaVal, int index, bool hasQty)
+        public bool TimeToSell(double? shortMaVal, double? longMaVal, double? prevShortMaVal, double? prevLongMaVal, bool hasQty)
         {
-            var check = index != 0 && prevShortMaVal >= prevLongMaVal;
+            var check = prevShortMaVal >= prevLongMaVal;
             return shortMaVal < longMaVal && hasQty == true && check;
         }
 

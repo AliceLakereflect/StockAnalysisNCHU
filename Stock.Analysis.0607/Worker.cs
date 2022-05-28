@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using AutoMapper;
 using CsvHelper;
 using Microsoft.Extensions.Hosting;
 using Stock.Analysis._0607.Interface;
@@ -89,16 +90,19 @@ namespace Stock.Analysis._0607
                 // +1 是為了api
 
                 var stockList = _dataService.GetStockDataFromDb(SYMBOL, window.TestPeriod.Start.AddDays(-7), window.TestPeriod.End.AddDays(1));
+                var config = new MapperConfiguration(cfg => cfg.AddProfile<StockModelDTO>());
+                var mapper = config.CreateMapper(); 
+                var stockListDto = mapper.Map<List<StockModel>, List<StockModelDTO>>(stockList); 
                 var copyCRandom = new Queue<int>(cRandom);
                 var periodStartTimeStamp = Utils.ConvertToUnixTimestamp(periodStart);
-                StatusValue bestGbest = Train(myTransList, copyCRandom, random, stockList, periodStartTimeStamp);
-                Test(bestGbest, stockList, periodStartTimeStamp);
+                StatusValue bestGbest = Train(myTransList, copyCRandom, random, stockListDto, periodStartTimeStamp);
+                Test(bestGbest, stockListDto, periodStartTimeStamp);
             });
         }
 
         #region private method
 
-        private static void Test(StatusValue bestGbest, List<StockModel> stockList, double periodStartTimeStamp)
+        private static void Test(StatusValue bestGbest, List<StockModelDTO> stockList, double periodStartTimeStamp)
         {
             GetTransactionsAndOutput(periodStartTimeStamp, stockList, bestGbest, "Test");
         }
@@ -107,7 +111,7 @@ namespace Stock.Analysis._0607
             List<StockTransList> myTransList,
             Queue<int> copyCRandom,
             Random random,
-            List<StockModel> stockList,
+            List<StockModelDTO> stockList,
             double periodStartTimeStamp
             )
         {
@@ -143,7 +147,7 @@ namespace Stock.Analysis._0607
             return bestGbest;
         }
 
-        private static void GetTransactionsAndOutput(double periodStart, List<StockModel> stockList, StatusValue bestGbest, string mode, int gBestCount = 0)
+        private static void GetTransactionsAndOutput(double periodStart, List<StockModelDTO> stockList, StatusValue bestGbest, string mode, int gBestCount = 0)
         {
             var testCase = new TestCase
             {
@@ -189,7 +193,7 @@ namespace Stock.Analysis._0607
             if (bestGbest.Fitness == gBest.Fitness) gBestCount++;
         }
 
-        private static void OutputEachExperiment(double periodStart, List<StockModel> stockList, List<StockTransList> myTransList, int e, StatusValue gBest)
+        private static void OutputEachExperiment(double periodStart, List<StockModelDTO> stockList, List<StockTransList> myTransList, int e, StatusValue gBest)
         {
             var gBestTestCase = new TestCase
             {

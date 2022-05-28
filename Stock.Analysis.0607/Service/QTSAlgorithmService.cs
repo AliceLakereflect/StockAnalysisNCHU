@@ -9,8 +9,8 @@ namespace Stock.Analysis._0607.Service
 {
     public interface IQTSAlgorithmService : IAlgorithmService
     {
-        StatusValue Fit(Random random, double funds, List<StockModel> stockList, ChartData data, int experiment, CsvWriter csv, double periodStartTimeStamp);
-        double GetFitness(TestCase currentTestCase, List<StockModel> stockList, double periodStartTimeStamp);
+        StatusValue Fit(Random random, double funds, List<StockModelDTO> stockList, ChartData data, int experiment, CsvWriter csv, double periodStartTimeStamp);
+        double GetFitness(TestCase currentTestCase, List<StockModelDTO> stockList, double periodStartTimeStamp);
         void MeatureX(Random random, List<Particle> particles, double funds);
     }
 
@@ -40,7 +40,7 @@ namespace Stock.Analysis._0607.Service
             };
         }
 
-        public StatusValue Fit(Random random, double funds, List<StockModel> stockList, ChartData data, int experiment, CsvWriter csv, double periodStartTimeStamp)
+        public StatusValue Fit(Random random, double funds, List<StockModelDTO> stockList, ChartData data, int experiment, CsvWriter csv, double periodStartTimeStamp)
         {
             var iteration = 0;
             
@@ -383,7 +383,7 @@ namespace Stock.Analysis._0607.Service
 
         }
 
-        public double GetFitness(TestCase currentTestCase, List<StockModel> stockList, double periodStartTimeStamp)
+        public double GetFitness(TestCase currentTestCase, List<StockModelDTO> stockList, double periodStartTimeStamp)
         {
             Stopwatch sw = new Stopwatch();
             var transactions = _researchOperationService.GetMyTransactions(stockList, currentTestCase, periodStartTimeStamp, sw, sw);

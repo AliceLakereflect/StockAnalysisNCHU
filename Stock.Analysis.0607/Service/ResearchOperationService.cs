@@ -51,7 +51,7 @@ namespace Stock.Analysis._0607.Service
             return chartDataList;
         }
 
-        public List<StockTransaction> ProfitSettlement(double currentStock, List<StockModel> stockList, TestCase testCase, List<StockTransaction> myTrans, double periodEnd)
+        public List<StockTransaction> ProfitSettlement(double currentStock, List<StockModelDTO> stockList, TestCase testCase, List<StockTransaction> myTrans, double periodEnd)
         {
             var hasQty = myTrans.Last().TransType == TransactionType.Buy;
             if (hasQty && myTrans.Last().TransTime == stockList.Last().Date) {
@@ -61,8 +61,7 @@ namespace Stock.Analysis._0607.Service
             {
                 //var timeString = Utils.UnixTimeStampToDateTime(periodEnd);
                 var price = currentStock;
-                var sellShortMaValList = _movingAvgService.CalculateMovingAvarage(stockList, testCase.SellShortTermMa).Select(stock => stock.Price).TakeLast(2).ToList();
-                var sellLongMaValList = _movingAvgService.CalculateMovingAvarage(stockList, testCase.SellLongTermMa).Select(stock => stock.Price).TakeLast(2).ToList();
+                var sellMaValList = stockList.TakeLast(2);
                 myTrans.Add(new StockTransaction
                 {
                     TransTime = periodEnd,
@@ -71,10 +70,10 @@ namespace Stock.Analysis._0607.Service
                     TransType = TransactionType.Sell,
                     TransVolume = myTrans.Last().TransVolume,
                     Balance = myTrans.Last().Balance + Math.Round(currentStock * myTrans.Last().TransVolume, 10, MidpointRounding.ToZero),
-                    SellShortMaPrice = sellShortMaValList.LastOrDefault() ?? 0,
-                    SellLongMaPrice = sellLongMaValList.LastOrDefault() ?? 0,
-                    SellShortMaPrice1DayBefore = sellShortMaValList.FirstOrDefault() ?? 0,
-                    SellLongMaPrice1DayBefore = sellLongMaValList.FirstOrDefault() ?? 0,
+                    SellShortMaPrice = sellMaValList.LastOrDefault().MaList[testCase.SellShortTermMa] ?? 0,
+                    SellLongMaPrice = sellMaValList.LastOrDefault().MaList[testCase.SellLongTermMa] ?? 0,
+                    SellShortMaPrice1DayBefore = sellMaValList.FirstOrDefault().MaList[testCase.SellShortTermMa] ?? 0,
+                    SellLongMaPrice1DayBefore = sellMaValList.FirstOrDefault().MaList[testCase.SellLongTermMa] ?? 0,
                 });
             }
 
@@ -93,7 +92,7 @@ namespace Stock.Analysis._0607.Service
 
 
         public List<StockTransaction> GetMyTransactions(
-            List<StockModel> stockList,
+            List<StockModelDTO> stockList,
             TestCase testCase,
             double periodStartTimeStamp,
             Stopwatch sw1,
@@ -111,24 +110,23 @@ namespace Stock.Analysis._0607.Service
             };
             myTransactions.Add(lastTrans);
             var symbol = testCase.Symbol;
-            var index = 0;
 
             bool hasQty = false;
             double? prevBuyShortMa = null, prevBuyLongMaVal = null, prevSellShortMaVal = null, prevSellLongMaVal = null;
-            sw1.Start();
             stockList.ForEach(stock =>
             {
-                sw2.Start();
-                var buyShortMaVal = GetMaValue(testCase.BuyShortTermMa,stock);
-                var buyLongMaVal = GetMaValue(testCase.BuyLongTermMa, stock);
-                var sellShortMa = GetMaValue(testCase.SellShortTermMa, stock);
-                var sellLongMaVal = GetMaValue(testCase.SellLongTermMa, stock);
+                sw1.Start();
+                var buyShortMaVal = stock.MaList[testCase.BuyShortTermMa] ?? null;
+                var buyLongMaVal = stock.MaList[testCase.BuyLongTermMa] ?? null;
+                var sellShortMa = stock.MaList[testCase.SellShortTermMa] ?? null;
+                var sellLongMaVal = stock.MaList[testCase.SellLongTermMa] ?? null;
+                sw1.Stop();
                 if (stock.Date > periodStartTimeStamp)
                 {
                     var price = stock.Price ?? 0;
                     
-                    bool testToBuy = _transTimingService.TimeToBuy(buyShortMaVal, buyLongMaVal, prevBuyShortMa, prevBuyLongMaVal, index, hasQty);
-                    bool testToSell = _transTimingService.TimeToSell(sellShortMa, sellLongMaVal, prevSellShortMaVal, prevSellLongMaVal, index, hasQty);
+                    bool testToBuy = _transTimingService.TimeToBuy(buyShortMaVal, buyLongMaVal, prevBuyShortMa, prevBuyLongMaVal, hasQty);
+                    bool testToSell = _transTimingService.TimeToSell(sellShortMa, sellLongMaVal, prevSellShortMaVal, prevSellLongMaVal, hasQty);
                     
                     if (buyShortMaVal != null && buyLongMaVal != null && testToBuy)
                     {
@@ -171,28 +169,18 @@ namespace Stock.Analysis._0607.Service
                         hasQty = !hasQty;
                     }
                 }
-
+                
                 prevBuyShortMa = buyShortMaVal;
                 prevBuyLongMaVal = buyLongMaVal;
                 prevSellShortMaVal = sellShortMa;
                 prevSellLongMaVal = sellLongMaVal;
-                index++;
-                sw2.Stop();
             });
-            sw1.Stop();
 
             var currentStock = stockList.Last().Price ?? 0;
             var periodEnd = stockList.Last().Date;
             ProfitSettlement(currentStock, stockList, testCase, myTransactions, periodEnd);
 
             return myTransactions;
-        }
-
-        public double? GetMaValue(int avgDay, StockModel stock)
-        {
-            var data = typeof(StockModel).GetProperty($"Ma{avgDay}").GetValue(stock);
-            var ma = Convert.ToDouble(data);
-            return ma == 0 ? null : ma ;
         }
     }
 }
