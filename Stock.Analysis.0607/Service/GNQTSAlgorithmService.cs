@@ -38,12 +38,8 @@ namespace Stock.Analysis._0607.Service
             DELTA = delda;
         }
 
-        public StatusValue Fit(Queue<int> cRandom, Random random, double funds, List<StockModelDTO> stockList, int experiment, CsvWriter csv, double periodStartTimeStamp)
+        public StatusValue Fit(Queue<int> cRandom, Random random, double funds, List<StockModelDTO> stockList, int experiment, double periodStartTimeStamp)
         {
-            Stopwatch swGetFitness = new Stopwatch();
-            Stopwatch swGetMaValue = new Stopwatch();
-            Stopwatch swValidation = new Stopwatch();
-
             var iteration = 0;
             
             var gBest = new StatusValue(funds);
@@ -70,7 +66,7 @@ namespace Stock.Analysis._0607.Service
             //var index = 0;
             particles.ForEach((p) =>
             {
-                p.CurrentFitness.Fitness = GetFitness(p.TestCase, stockList, periodStartTimeStamp, swGetMaValue, swValidation);
+                p.CurrentFitness.Fitness = GetFitness(p.TestCase, stockList, periodStartTimeStamp);
                 //#region debug
 
                 //csv.WriteField($"P{index}");
@@ -120,8 +116,6 @@ namespace Stock.Analysis._0607.Service
             //csv.NextRecord();
 
             //#endregion
-            swGetMaValue.Reset();
-            swValidation.Reset();
             while (iteration < GENERATIONS - 1)
             {
                 iteration++;
@@ -136,9 +130,7 @@ namespace Stock.Analysis._0607.Service
                 
                 particles.ForEach((p) =>
                 {
-                    swGetFitness.Start();
-                    p.CurrentFitness.Fitness = GetFitness(p.TestCase, stockList, periodStartTimeStamp, swGetMaValue, swValidation);
-                    swGetFitness.Stop();
+                    p.CurrentFitness.Fitness = GetFitness(p.TestCase, stockList, periodStartTimeStamp);
                     //#region debug
 
                     //csv.WriteField($"P{index}");
@@ -191,10 +183,6 @@ namespace Stock.Analysis._0607.Service
 
                 //#endregion
             }
-
-            Console.WriteLine($"\nswGetFitness \t-\t {swGetFitness.Elapsed.Minutes}:{swGetFitness.Elapsed.Seconds}:{swGetFitness.Elapsed.Milliseconds}");
-            Console.WriteLine($" - sw1 \t-\t {swGetMaValue.Elapsed.Minutes}:{swGetMaValue.Elapsed.Seconds}:{swGetMaValue.Elapsed.Milliseconds}");
-            Console.WriteLine($" - sw2 \t-\t {swValidation.Elapsed.Minutes}:{swValidation.Elapsed.Seconds}:{swValidation.Elapsed.Milliseconds}");
 
             return gBest;
         }
@@ -435,12 +423,10 @@ namespace Stock.Analysis._0607.Service
         public double GetFitness(
             TestCase currentTestCase,
             List<StockModelDTO> stockList,
-            double periodStartTimeStamp,
-            Stopwatch swGetMaValue,
-            Stopwatch swValidation)
+            double periodStartTimeStamp)
         {
             
-            var transactions = _researchOperationService.GetMyTransactions(stockList, currentTestCase, periodStartTimeStamp, swGetMaValue, swValidation);
+            var transactions = _researchOperationService.GetMyTransactions(stockList, currentTestCase, periodStartTimeStamp);
             var earns = _researchOperationService.GetEarningsResults(transactions);
             var result = Math.Round(earns, 10);
             return result;
@@ -449,8 +435,8 @@ namespace Stock.Analysis._0607.Service
 
     public interface IGNQTSAlgorithmService : IAlgorithmService
     {
-        StatusValue Fit(Queue<int> cRandom, Random random, double funds, List<StockModelDTO> stockList, int experiment, CsvWriter csv, double periodStartTimeStamp);
-        double GetFitness(TestCase currentTestCase, List<StockModelDTO> stockList, double periodStartTimeStamp, Stopwatch swGetMaValue, Stopwatch swValidation);
+        StatusValue Fit(Queue<int> cRandom, Random random, double funds, List<StockModelDTO> stockList, int experiment, double periodStartTimeStamp);
+        double GetFitness(TestCase currentTestCase, List<StockModelDTO> stockList, double periodStartTimeStamp);
         public void UpdateProByGN(Particle p, StatusValue gbest, StatusValue localWorst);
         public void SetDelta(double delta);
         void MetureX(Queue<int> cRandom, Random random, List<Particle> particles, double funds);

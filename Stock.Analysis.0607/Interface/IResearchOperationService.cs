@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
+﻿using System.Collections.Generic;
 using Stock.Analysis._0607.Models;
 
 namespace Stock.Analysis._0607.Service
@@ -11,6 +9,6 @@ namespace Stock.Analysis._0607.Service
         void CalculateAllMa(ref List<StockModel> stockList);
         List<StockTransaction> ProfitSettlement(double currentStock, List<StockModelDTO> stockList, TestCase testCase, List<StockTransaction> myTrans, double periodEnd);
         double GetEarningsResults(List<StockTransaction> myTrans);
-        List<StockTransaction> GetMyTransactions(List<StockModelDTO> stockList, TestCase testCase, double periodStartTimeStamp, Stopwatch swGetMaValue, Stopwatch swValidation);
+        List<StockTransaction> GetMyTransactions(List<StockModelDTO> stockList, TestCase testCase, double periodStartTimeStamp);
     }
 }

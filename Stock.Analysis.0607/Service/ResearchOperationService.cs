@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using Stock.Analysis._0607.Models;
 
@@ -94,9 +93,7 @@ namespace Stock.Analysis._0607.Service
         public List<StockTransaction> GetMyTransactions(
             List<StockModelDTO> stockList,
             TestCase testCase,
-            double periodStartTimeStamp,
-            Stopwatch sw1,
-            Stopwatch sw2)
+            double periodStartTimeStamp)
         {
             var myTransactions = new List<StockTransaction>();
             var lastTrans = new StockTransaction
@@ -115,12 +112,10 @@ namespace Stock.Analysis._0607.Service
             double? prevBuyShortMa = null, prevBuyLongMaVal = null, prevSellShortMaVal = null, prevSellLongMaVal = null;
             stockList.ForEach(stock =>
             {
-                sw1.Start();
                 var buyShortMaVal = stock.MaList[testCase.BuyShortTermMa] ?? null;
                 var buyLongMaVal = stock.MaList[testCase.BuyLongTermMa] ?? null;
                 var sellShortMa = stock.MaList[testCase.SellShortTermMa] ?? null;
                 var sellLongMaVal = stock.MaList[testCase.SellLongTermMa] ?? null;
-                sw1.Stop();
                 if (stock.Date > periodStartTimeStamp)
                 {
                     var price = stock.Price ?? 0;

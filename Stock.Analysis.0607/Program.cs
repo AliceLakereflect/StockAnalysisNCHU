@@ -36,14 +36,19 @@ namespace Stock.Analysis._0607
             services.AddSingleton<IMovingAvarageService, MovingAvarageService>();
             services.AddSingleton<ITransTimingService, TransTimingService>();
             services.AddSingleton<ICalculateVolumeService, CalculateVolumeService>();
+            services.AddSingleton<IOutputResultService, OutputResultService>();
 
             // DbContext
             var connectString = "Host=localhost;Database=StockResearch;Username=postgres;Password=13";
             services.AddDbContext<StockModelDbContext>(options => options.UseNpgsql(connectString));
             services.AddScoped<IDataProvider<StockModel>, StockModelDataProvider>();
+            services.AddDbContext<TrainResultDbContext>(options => options.UseNpgsql(connectString));
+            services.AddScoped<IDataProvider<TrainResult>, TrainResultProvider>();
+            services.AddDbContext<TrainBestTransactionDbContext>(options => options.UseNpgsql(connectString));
+            services.AddScoped<IDataProvider<TrainBestTransaction>, TrainBestTransactionProvider>();
 
             // automapper
-            services.AddAutoMapper(typeof(StockModel));
+            services.AddAutoMapper(typeof(StockModelDTO));
 
         }
     }

@@ -1,13 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Globalization;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AutoMapper;
-using CsvHelper;
 using Microsoft.Extensions.Hosting;
 using Stock.Analysis._0607.Interface;
 using Stock.Analysis._0607.Models;
@@ -22,7 +19,9 @@ namespace Stock.Analysis._0607
         private static IFileHandler _fileHandler;
         private static IDataService _dataService;
         private static ISlidingWindowService _slidingWindowService;
-        IDataProvider<StockModel> _stockModelDataProvider;
+        private static IOutputResultService _outputResultService;
+        private static IMapper _mapper;
+        private static IDataProvider<StockModel> _stockModelDataProvider;
 
         const string SYMBOL = "AAPL";
         const double FUNDS = 10000000;
@@ -33,7 +32,9 @@ namespace Stock.Analysis._0607
             IFileHandler fileHandler,
             IDataService dataService,
             ISlidingWindowService slidingWindowService,
-            IDataProvider<StockModel> stockModelDataProvider
+            IOutputResultService outputResultService,
+            IDataProvider<StockModel> stockModelDataProvider,
+            IMapper mapper
             )
         {
             _researchOperationService = researchOperationService ?? throw new ArgumentNullException(nameof(researchOperationService));
@@ -42,6 +43,8 @@ namespace Stock.Analysis._0607
             _dataService = dataService ?? throw new ArgumentNullException(nameof(dataService));
             _slidingWindowService = slidingWindowService ?? throw new ArgumentNullException(nameof(slidingWindowService));
             _stockModelDataProvider = stockModelDataProvider ?? throw new ArgumentNullException(nameof(stockModelDataProvider));
+            _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
+            _outputResultService = outputResultService ?? throw new ArgumentNullException(nameof(outputResultService));
         }
 
         protected override Task ExecuteAsync(CancellationToken stoppingToken)
@@ -72,7 +75,7 @@ namespace Stock.Analysis._0607
             var myTransList = new List<StockTransList>();
 
             // stock parameters
-            var allStart = new DateTime(2014, 12, 1, 0, 0, 0);
+            var allStart = new DateTime(2019, 2, 1, 0, 0, 0);
             var allEnd = new DateTime(2021, 12, 31, 0, 0, 0);
             var period = new Period { Start = allStart, End = allEnd };
             _qtsAlgorithmService.SetDelta(0.00016);
@@ -90,9 +93,7 @@ namespace Stock.Analysis._0607
                 // +1 是為了api
 
                 var stockList = _dataService.GetStockDataFromDb(SYMBOL, window.TestPeriod.Start.AddDays(-7), window.TestPeriod.End.AddDays(1));
-                var config = new MapperConfiguration(cfg => cfg.AddProfile<StockModelDTO>());
-                var mapper = config.CreateMapper(); 
-                var stockListDto = mapper.Map<List<StockModel>, List<StockModelDTO>>(stockList); 
+                var stockListDto = _mapper.Map<List<StockModel>, List<StockModelDTO>>(stockList); 
                 var copyCRandom = new Queue<int>(cRandom);
                 var periodStartTimeStamp = Utils.ConvertToUnixTimestamp(periodStart);
                 StatusValue bestGbest = Train(myTransList, copyCRandom, random, stockListDto, periodStartTimeStamp);
@@ -104,7 +105,9 @@ namespace Stock.Analysis._0607
 
         private static void Test(StatusValue bestGbest, List<StockModelDTO> stockList, double periodStartTimeStamp)
         {
-            GetTransactionsAndOutput(periodStartTimeStamp, stockList, bestGbest, "Test");
+            var periodStart = Utils.UnixTimeStampToDateTime(periodStartTimeStamp);
+            var fileName = $"M2M/GNQTS Test - Crandom - {periodStart.Year}-{periodStart.Month}-{periodStart.Day}";
+            _outputResultService.OutputQTSResult(FUNDS, EXPERIMENT_NUMBER, fileName, SYMBOL, periodStartTimeStamp, stockList, bestGbest);
         }
 
         private static StatusValue Train(
@@ -117,52 +120,36 @@ namespace Stock.Analysis._0607
         {
             StatusValue bestGbest = new StatusValue();
             int gBestCount = 0;
+            var periodStart = Utils.UnixTimeStampToDateTime(periodStartTimeStamp);
 
             for (var e = 0; e < EXPERIMENT_NUMBER; e++)
             {
                 Console.WriteLine("\nBegin:\n");
                 Stopwatch swFit = new Stopwatch();
-                var path = Path.Combine(Environment.CurrentDirectory, $"Output/50 Experements/debug G best transaction exp: {e} - C random.csv");
-                StatusValue gBest = new StatusValue();
-                using (var writer = new StreamWriter(path))
-                using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture, false))
-                {
+                //var path = Path.Combine(Environment.CurrentDirectory, $"Output/50 Experements/debug G best transaction exp: {e} - C random.csv");
+                StatusValue gBest;
+                //using (var writer = new StreamWriter(path))
+                //using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture, false))
+                //{
                     swFit.Start();
-                    
-                    gBest = _qtsAlgorithmService.Fit(copyCRandom, random, FUNDS, stockList, e, csv, periodStartTimeStamp);
+                    gBest = _qtsAlgorithmService.Fit(copyCRandom, random, FUNDS, stockList, e, periodStartTimeStamp);
                     swFit.Stop();
-                }
+                //}
                 Console.WriteLine($"{e}: {gBest.Fitness} => {swFit.Elapsed.Minutes}:{swFit.Elapsed.Seconds}:{swFit.Elapsed.Milliseconds}");
                 swFit.Reset();
                 CompareGBestByBits(ref bestGbest, ref gBestCount, gBest);
 
-                OutputEachExperiment(periodStartTimeStamp, stockList, myTransList, e, gBest);
+                var fileName = $"50 Experements/G best transaction {e} - {periodStart.Year}-{periodStart.Month}-{periodStart.Day}";
+                _outputResultService.OutputQTSResult(FUNDS, EXPERIMENT_NUMBER, fileName, SYMBOL, periodStartTimeStamp, stockList, bestGbest, gBestCount);
             }
 
             if (bestGbest.BuyMa1.Count > 0)
             {
-                GetTransactionsAndOutput(periodStartTimeStamp, stockList, bestGbest, "Train", gBestCount);
+                var fileName = $"M2M/GNQTS Train - Crandom - {periodStart.Year}-{periodStart.Month}-{periodStart.Day}";
+                _outputResultService.OutputQTSResult(FUNDS, EXPERIMENT_NUMBER, fileName, SYMBOL, periodStartTimeStamp, stockList, bestGbest, gBestCount);
             }
 
             return bestGbest;
-        }
-
-        private static void GetTransactionsAndOutput(double periodStart, List<StockModelDTO> stockList, StatusValue bestGbest, string mode, int gBestCount = 0)
-        {
-            var testCase = new TestCase
-            {
-                Funds = FUNDS,
-                BuyShortTermMa = Utils.GetMaNumber(bestGbest.BuyMa1),
-                BuyLongTermMa = Utils.GetMaNumber(bestGbest.BuyMa2),
-                SellShortTermMa = Utils.GetMaNumber(bestGbest.SellMa1),
-                SellLongTermMa = Utils.GetMaNumber(bestGbest.SellMa2)
-            };
-            Stopwatch sw = new Stopwatch();
-            var t = _researchOperationService.GetMyTransactions(stockList, testCase, periodStart, sw, sw);
-            var a = _qtsAlgorithmService.GetConst();
-            a.EXPERIMENT_NUMBER = EXPERIMENT_NUMBER;
-            _fileHandler.OutputQTSResult(a, FUNDS, bestGbest, gBestCount, t,
-                $"M2M/GNQTS {mode} - Crandom - {periodStart}");
         }
 
         private static void CompareGBestByBits(ref StatusValue bestGbest, ref int gBestCount, StatusValue gBest)
@@ -191,52 +178,6 @@ namespace Stock.Analysis._0607
             }
 
             if (bestGbest.Fitness == gBest.Fitness) gBestCount++;
-        }
-
-        private static void OutputEachExperiment(double periodStart, List<StockModelDTO> stockList, List<StockTransList> myTransList, int e, StatusValue gBest)
-        {
-            var gBestTestCase = new TestCase
-            {
-                Funds = FUNDS,
-                BuyShortTermMa = Utils.GetMaNumber(gBest.BuyMa1),
-                BuyLongTermMa = Utils.GetMaNumber(gBest.BuyMa2),
-                SellShortTermMa = Utils.GetMaNumber(gBest.SellMa1),
-                SellLongTermMa = Utils.GetMaNumber(gBest.SellMa2)
-            };
-            Stopwatch sw = new Stopwatch();
-            var transactions = _researchOperationService.GetMyTransactions(stockList, gBestTestCase, periodStart, sw, sw);
-            myTransList.Add(new StockTransList { Name = SYMBOL, TestCase = gBestTestCase, Transactions = transactions });
-
-            // Output csv file
-            var algorithmConst = _qtsAlgorithmService.GetConst();
-            algorithmConst.EXPERIMENT_NUMBER = e;
-            _fileHandler.OutputQTSResult(algorithmConst, FUNDS, gBest, 0, transactions, $"50 Experements/G best transaction {e} - {periodStart}");
-        }
-
-        private static void PrintTransactions(
-            string symbol,
-            TestCase currentTestCase,
-            List<StockModel> stockList,
-            List<StockTransaction> myTrans,
-            TestCase ma,
-            double? currentStock)
-        {
-            Console.WriteLine($"{symbol}\t Current Stock: {currentStock}");
-            var earn = _researchOperationService.GetEarningsResults(myTrans);
-            var resultString = $"When ma = Buy: {ma.BuyShortTermMa} vs {ma.BuyLongTermMa}; Sell: {ma.SellShortTermMa} vs {ma.SellLongTermMa};,\tEarned: {earn}\t";
-            if (!resultString.Contains("Earned: 0"))
-            {
-                Console.WriteLine(resultString);
-            }
-            var transString = "=== My Transaction ======================================================================================\n";
-            transString += $"|\tName: {symbol}\t Test Case: {currentTestCase.BuyShortTermMa}MA vs {currentTestCase.BuyLongTermMa}MA \t Current Stock:{stockList.Last().Price}\n";
-            myTrans.ForEach(t =>
-            {
-                transString += $"|\t TransType: {t.TransType}\n|\t TransTime: {t.TransTimeString}\t TransVolume:{t.TransVolume}\t Fees:{t.Fees}\t " +
-                $"Tax: {t.Tax}\t Balance: {t.Balance}\t TransPrice: {t.TransPrice}\n";
-            });
-            transString += "=========================================================================================================\n";
-            Console.WriteLine(transString);
         }
 
         #endregion
