@@ -18,7 +18,7 @@ namespace Stock.Analysis.Tests.Service
         [MemberData(nameof(CalculatorData.TimeToBuy), MemberType = typeof(CalculatorData))]
         public void TimeToBuyTest(bool expected, List<double?> shortMaValList, List<double?> longMaValList, bool hasQty)
         {
-            var buyOrNot = _transTimingService.TimeToBuy(shortMaValList, longMaValList, 1, hasQty);
+            var buyOrNot = _transTimingService.TimeToBuy(shortMaValList[1], longMaValList[1], shortMaValList[0], longMaValList[0], hasQty);
             Assert.Equal(expected, buyOrNot);
         }
 
@@ -40,7 +40,7 @@ namespace Stock.Analysis.Tests.Service
         [InlineData(10.8, null, true, false)]
         public void TimeToSellTest(double? shortMaVal, double? longMaVal, bool hasQty, bool expected)
         {
-            var result = _transTimingService.TimeToSell(new List<double?> { 1, shortMaVal }, new List<double?> { 0,longMaVal }, 1, hasQty);
+            var result = _transTimingService.TimeToSell(shortMaVal, longMaVal, 1, 0, hasQty);
             Assert.Equal(expected, result);
         }
 

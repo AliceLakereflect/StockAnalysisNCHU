@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using Stock.Analysis.Tests.MockData;
 using System.Linq;
 using Moq;
+using AutoMapper;
 
 namespace Stock.Analysis.Tests.Service
 {
@@ -142,8 +143,10 @@ namespace Stock.Analysis.Tests.Service
             particles.Add(new Particle());
             var list = new List<int> { 1158, 24406, 21033, 31385, 7810, 15177, 27360, 11270, 5061, 18977, 20657, 10440, 25369, 6807, 30273, 31878, 32476, 21913, 8341, 22714, 4334, 669, 27165, 7081, 13774, 26165, 30449, 17304, 29439, 12003, 15962, 8765, 27825, 25647, 3476, 25716, 7837, 19448, 10194, 16947, 7217, 14856, 10115, 27328, 7149, 32235, 1236, 289, 21005, 25344, 25974, 15573, 24168, 30416, 6561, 705, 20888, 2463, 27225, 2669, 3419, 7489, 7408, 25456, 1081, 13871, 20428, 28457, 7271, 17114, 5226, 8880, 14828, 3391, 27299, 9484, 13314, 27324, 302, 7591, 14783, 7714, 24423, 18175, 27124, 8203, 23630, 6557, 8790, 16750, 1747, 9035, 18907, 23664, 25425, 24194, 6759, 1917, 8792, 7714, 11688, 32408, 13487, 24933, 20798, 14063, 24729, 9238, 26144, 20659, 15448, 32510, 20283, 23334, 12784, 11424, 13148, 7926, 28717, 17958, 5711, 25289, 27879, 19610, 3401, 24089, 23685, 21081, 4739, 20034, 17088 };
             var random = new Random();
+            var cRandom = new Queue<int>();
+            list.ForEach(i => cRandom.Enqueue(i));
 
-            _qtsService.MeatureX(random, particles, 10000000);
+            _qtsService.MeatureX(cRandom, random, particles, 10000000);
 
             var result = particles.First().CurrentFitness;
             var index = 0;
@@ -183,20 +186,21 @@ namespace Stock.Analysis.Tests.Service
                 SellShortTermMa = 5,
                 SellLongTermMa = 20
             };
-            var periodStart = new DateTime(2020, 1, 1, 0, 0, 0);
+            var periodStart = Utils.ConvertToUnixTimestamp(new DateTime(2020, 1, 1, 0, 0, 0));
             var periodEnd = new DateTime(2021, 6, 30, 0, 0, 0);
             var dataList = _historyRepository.GetRealData1yOf2603();
-            var chartData = new ChartData
-            {
-                Name = "2603.TW",
-                Price = new List<double?>()
-            };
+            dataList = _movingAvarageService.CalculateMovingAvarage(dataList, 5);
+            dataList = _movingAvarageService.CalculateMovingAvarage(dataList, 20);
 
-            chartData.Price = dataList.Select(s => s.Price).ToList();
-            chartData.Timestamp = dataList.Select(s => s.Date).ToList();
-            chartData.MaList.Add(5, _movingAvarageService.CalculateMovingAvarage(dataList, 5).Select(s => s.Price).ToList());
-            chartData.MaList.Add(20, _movingAvarageService.CalculateMovingAvarage(dataList, 20).Select(s => s.Price).ToList());
-            var result = _qtsService.GetFitness(testCase, dataList, chartData, periodStart);
+            var config = new MapperConfiguration(cfg =>
+            {
+                cfg.CreateMap<StockModel, StockModelDTO>();
+                cfg.AddProfile<StockModelDTO>();
+            });
+            var mapper = config.CreateMapper();
+            var stockListDto = mapper.Map<List<StockModel>, List<StockModelDTO>>(dataList);
+
+            var result = _qtsService.GetFitness(testCase, stockListDto.OrderBy(s => s.Date).ToList(), periodStart);
 
             Assert.Equal(1297974 + testCase.Funds, Math.Round(result));
         }

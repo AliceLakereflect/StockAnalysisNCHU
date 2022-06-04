@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Linq;
+using Microsoft.EntityFrameworkCore;
 using Moq;
 using Newtonsoft.Json;
 using Stock.Analysis._0607.Interface;
 using Stock.Analysis._0607.Models;
+using Stock.Analysis._0607.Repository;
 using Stock.Analysis._0607.Service;
 using Xunit;
 
@@ -15,6 +17,10 @@ namespace Stock.Analysis.Tests.Service
         private IDataService _dataService;
         public DataServiceTests()
         {
+            var connectString = "Host=localhost;Database=StockResearch;Username=postgres;Password=13";
+            var options = new DbContextOptionsBuilder<StockModelDbContext>();
+            options.UseNpgsql(connectString);
+            _stockModeldataProvider = new StockModelDataProvider(new StockModelDbContext(options.Options));
             _dataService = new DataService(_stockModeldataProvider);
         }
 
@@ -33,21 +39,12 @@ namespace Stock.Analysis.Tests.Service
         }
 
         [Fact]
-        public void Get1dDataFromYahooApiTest()
-        {
-            var symbol = "AAPL";
-            var result = _dataService.Get1dDataFromYahooApi(symbol);
-            Assert.NotEmpty(result);
-            Assert.Equal(391, result.Count);
-        }
-
-        [Fact]
         public void Get1YDataFromYahooApiTest()
         {
             var symbol = "AAPL";
-            var result = _dataService.Get1YDataFromYahooApi(symbol);
+            var result = _dataService.GetStockDataFromDb(symbol, new DateTime(2021, 1, 1), new DateTime(2021, 12, 31));
             Assert.NotEmpty(result);
-            Assert.Equal(253, result.Count);
+            Assert.Equal(251, result.Count);
         }
 
         [Fact]

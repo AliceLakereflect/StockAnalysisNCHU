@@ -11,7 +11,7 @@ namespace Stock.Analysis._0607.Service
     {
         StatusValue Fit(Random random, double funds, List<StockModelDTO> stockList, ChartData data, int experiment, CsvWriter csv, double periodStartTimeStamp);
         double GetFitness(TestCase currentTestCase, List<StockModelDTO> stockList, double periodStartTimeStamp);
-        void MeatureX(Random random, List<Particle> particles, double funds);
+        void MeatureX(Queue<int> cRandom, Random random, List<Particle> particles, double funds);
     }
 
     public class QTSAlgorithmService: IQTSAlgorithmService
@@ -63,7 +63,7 @@ namespace Stock.Analysis._0607.Service
                 particles.Add(new Particle());
             }
 
-            MeatureX(random, particles, funds);
+            MeatureX(new Queue<int>(),random, particles, funds);
 
             var first = true;
             var index = 0;
@@ -132,7 +132,7 @@ namespace Stock.Analysis._0607.Service
                 csv.NextRecord();
 
                 #endregion
-                MeatureX(random, particles, funds);
+                MeatureX(new Queue<int>(), random, particles, funds);
                 index = 0;
                 particles.ForEach((p) =>
                 {
@@ -339,32 +339,32 @@ namespace Stock.Analysis._0607.Service
             }
         }
 
-        public void MeatureX(Random random, List<Particle> particles, double funds)
+        public void MeatureX(Queue<int> cRandom, Random random, List<Particle> particles, double funds)
         {
             particles.ForEach((p) =>
             {
                 p.CurrentFitness.BuyMa1 = new List<int>();
                 p.BuyMa1Beta.ForEach((x) =>
                 {
-                    p.CurrentFitness.BuyMa1.Add(x >= random.Next() / RANDOM_MAX ? 1 : 0);
+                    p.CurrentFitness.BuyMa1.Add(x >= cRandom.Dequeue() / RANDOM_MAX ? 1 : 0);
                 });
 
                 p.CurrentFitness.BuyMa2 = new List<int>();
                 p.BuyMa2Beta.ForEach((x) =>
                 {
-                    p.CurrentFitness.BuyMa2.Add(x >= random.Next() / RANDOM_MAX ? 1 : 0);
+                    p.CurrentFitness.BuyMa2.Add(x >= cRandom.Dequeue() / RANDOM_MAX ? 1 : 0);
                 });
 
                 p.CurrentFitness.SellMa1 = new List<int>();
                 p.SellMa1Beta.ForEach((x) =>
                 {
-                    p.CurrentFitness.SellMa1.Add(x >= random.Next() / RANDOM_MAX ? 1 : 0);
+                    p.CurrentFitness.SellMa1.Add(x >= cRandom.Dequeue() / RANDOM_MAX ? 1 : 0);
                 });
 
                 p.CurrentFitness.SellMa2 = new List<int>();
                 p.SellMa2Beta.ForEach((x) =>
                 {
-                    p.CurrentFitness.SellMa2.Add(x >= random.Next() / RANDOM_MAX ? 1 : 0);
+                    p.CurrentFitness.SellMa2.Add(x >= cRandom.Dequeue() / RANDOM_MAX ? 1 : 0);
                 });
 
                 var buyMa1 = Utils.GetMaNumber(p.CurrentFitness.BuyMa1);

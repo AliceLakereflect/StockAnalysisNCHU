@@ -7,12 +7,14 @@ using Stock.Analysis._0607.Models;
 using Stock.Analysis.Tests.MockData;
 using Moq;
 using Stock.Analysis._0607.Interface;
+using Microsoft.EntityFrameworkCore;
+using Stock.Analysis._0607.Repository;
 
 namespace Stock.Analysis.Tests.Service
 {
     public class MovingAvarageServiceTests
     {
-        private IDataProvider<StockModel> _stockModeldataProvider = new Mock<IDataProvider<StockModel>>().Object;
+        private IDataProvider<StockModel> _stockModeldataProvider;
         private IMovingAvarageService _movingAvgService = new MovingAvarageService();
         private List<double> ma5FromYahoo = new List<double> { 95.26, 100.24, 106.5, 110.52, 112.9, 114.4, 115.5, 114.4, 115.9, 121, 124.6,
             128.7, 134, 139.6, 143.1, 144.1, 147.2, 151.2, 156, 161.2, 172.9
@@ -27,13 +29,17 @@ namespace Stock.Analysis.Tests.Service
             78.88, 80.52, 82.29, 84.14, 85.72, 87.55, 89.5, 91.71, 93.97, 96.49
         };
         private readonly IRepository _historyRepository = new HistoryRepository();
-        ChartData _historicalData;
-        List<StockModel> _stockList = new List<StockModel>();
+        private readonly ChartData _historicalData;
+        readonly List<StockModelDTO> _stockList = new List<StockModelDTO>();
 
         public MovingAvarageServiceTests()
         {
+            var connectString = "Host=localhost;Database=StockResearch;Username=postgres;Password=13";
+            var options = new DbContextOptionsBuilder<StockModelDbContext>();
+            options.UseNpgsql(connectString);
+            _stockModeldataProvider = new StockModelDataProvider(new StockModelDbContext(options.Options));
             _historicalData = _historyRepository.GetConcussiveHistoryData();
-            _stockList = _historyRepository.GetConcussiveStockList();
+            _stockList = _historyRepository.GetConcussiveStockListDTO();
         }
         [Fact]
         public void CalculateMovingAvarage()
@@ -61,7 +67,7 @@ namespace Stock.Analysis.Tests.Service
                 new StockModel{ Date = dateTime.AddDays(26).Ticks, Price = 28 },
                 new StockModel{ Date = dateTime.AddDays(27).Ticks, Price = 29 }
             };
-            var result = _movingAvgService.CalculateMovingAvarage(stockList, 5).Select(s => s.Price).ToList(); ;
+            var result = _movingAvgService.CalculateMovingAvarage(stockList, 5).OrderBy(s => s.Date).Select(s => s.Ma5).ToList();
             Assert.Null(result[0]);
             Assert.Null(result[1]);
             Assert.Null(result[2]);
@@ -87,7 +93,9 @@ namespace Stock.Analysis.Tests.Service
         [Fact]
         public void CalculateMovingAvarage5()
         {
-            var result = _movingAvgService.CalculateMovingAvarage(_stockList, 5).Select(s => s.Price).ToList();
+            var stockList = _historyRepository.GetConcussiveStockList();
+
+            var result = _movingAvgService.CalculateMovingAvarage(stockList, 5).OrderBy(s => s.Date).Select(s => s.Ma5).ToList();
             var index = 0;
             var limit = 4;
             var descExpected = 98;
@@ -157,7 +165,7 @@ namespace Stock.Analysis.Tests.Service
                 });
             }
 
-            var result = _movingAvgService.CalculateMovingAvarage(stockList, 60).Select(s => s.Price).ToList();
+            var result = _movingAvgService.CalculateMovingAvarage(stockList, 60).OrderBy(s => s.Date).Select(s => s.Ma60).ToList();
             var index = 0;
             var limit = 59;
             var firstExpected = 39.5;
@@ -172,56 +180,24 @@ namespace Stock.Analysis.Tests.Service
                     var expected = firstExpected - limit + Convert.ToDouble(index);
                     Assert.Equal(expected, result[index]);
                 }
-
                 index++;
             });
-        }
-
-        [Fact]
-        public void TestWithJsonData()
-        {
-            var historyRepo = new HistoryRepository();
-            var dataList = historyRepo.GetRealData120dOf2603();
-            var ma5 = _movingAvgService.CalculateMovingAvarage(dataList, 5)
-                .Select(s => s.Price == null ? 0 : Math.Round(s.Price ?? 0, 2, MidpointRounding.AwayFromZero)).ToList().GetRange(61,21);
-            var ma10 = _movingAvgService.CalculateMovingAvarage(dataList, 10)
-                .Select(s => s.Price == null ? 0 : Math.Round(s.Price ?? 0, 2, MidpointRounding.AwayFromZero)).ToList().GetRange(61, 21);
-            var ma20 = _movingAvgService.CalculateMovingAvarage(dataList, 20)
-                .Select(s => s.Price == null ? 0 : Math.Round(s.Price ?? 0, 2, MidpointRounding.AwayFromZero)).ToList().GetRange(61, 21);
-            var ma60 = _movingAvgService.CalculateMovingAvarage(dataList, 60)
-                .Select(s => s.Price == null ? 0 : Math.Round(s.Price ?? 0, 2, MidpointRounding.AwayFromZero)).ToList().GetRange(61, 21);
-
-            Assert.Equal<double>(ma5FromYahoo, ma5);
-            Assert.Equal<double>(ma10FromYahoo, ma10);
-            Assert.Equal<double>(ma20FromYahoo, ma20);
-            Assert.Equal<double>(ma60FromYahoo, ma60);
         }
 
         [Fact]
         public void TestWithRealData()
         {
             var dataService = new DataService(_stockModeldataProvider);
-            var dataList = dataService.GetPeriodDataFromYahooApi("2603.TW", new DateTime(2021,3,1), new DateTime(2021,7,1));
-            var filehandler = new FileHandler();
-            filehandler.OutputCsv(dataList, "Price");
-            var ma5 = _movingAvgService.CalculateMovingAvarage(dataList, 5)
-                .Select(s => s.Price == null ? 0 : Math.Round(s.Price ?? 0, 2, MidpointRounding.AwayFromZero)).ToList().GetRange(61, 21);
-            var ma10 = _movingAvgService.CalculateMovingAvarage(dataList, 10)
-                .Select(s => s.Price == null ? 0 : Math.Round(s.Price ?? 0, 2, MidpointRounding.AwayFromZero)).ToList().GetRange(61, 21);
-            var ma20 = _movingAvgService.CalculateMovingAvarage(dataList, 20)
-                .Select(s => s.Price == null ? 0 : Math.Round(s.Price ?? 0, 2, MidpointRounding.AwayFromZero)).ToList().GetRange(61, 21);
-            var ma60 = _movingAvgService.CalculateMovingAvarage(dataList, 60)
-                .Select(s => s.Price == null ? 0 : Math.Round(s.Price ?? 0, 2, MidpointRounding.AwayFromZero)).ToList().GetRange(61, 21);
-
-            Assert.Equal<double>(ma5FromYahoo, ma5);
-            Assert.Equal<double>(ma10FromYahoo, ma10);
-            var index = -1;
-            Assert.All(ma20, value=>
+            var dataList = dataService.GetStockDataFromDb("2603.TW", new DateTime(2021,6,1), new DateTime(2021,7,1));
+            var index = 0;
+            Assert.All(dataList, stock =>
             {
+                Assert.Equal(ma5FromYahoo.ElementAt(index), Math.Round((double)stock.Ma5, 2, MidpointRounding.AwayFromZero));
+                Assert.Equal(ma10FromYahoo.ElementAt(index), Math.Round((double)stock.Ma10, 2, MidpointRounding.AwayFromZero));
+                Assert.Equal(ma20FromYahoo.ElementAt(index), Math.Round((double)stock.Ma20, 2, MidpointRounding.AwayFromZero));
+                Assert.Equal(ma60FromYahoo.ElementAt(index), Math.Round((double)stock.Ma60, 2, MidpointRounding.AwayFromZero));
                 index++;
-                Assert.Equal(ma20FromYahoo.ElementAt(index), value);
             });
-            Assert.Equal<double>(ma60FromYahoo, ma60);
         }
     }
 }

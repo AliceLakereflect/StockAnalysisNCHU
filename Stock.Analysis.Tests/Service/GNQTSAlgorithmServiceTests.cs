@@ -7,6 +7,7 @@ using Stock.Analysis.Tests.MockData;
 using System.Linq;
 using System.Diagnostics;
 using Moq;
+using AutoMapper;
 
 namespace Stock.Analysis.Tests.Service
 {
@@ -217,7 +218,7 @@ namespace Stock.Analysis.Tests.Service
                 SellShortTermMa = 5,
                 SellLongTermMa = 20
             };
-            var periodStart = new DateTime(2020, 1, 1, 0, 0, 0);
+            var periodStart = Utils.ConvertToUnixTimestamp(new DateTime(2020, 1, 1, 0, 0, 0));
             var periodEnd = new DateTime(2021, 6, 30, 0, 0, 0);
             var dataList = _historyRepository.GetRealData1yOf2603();
             var chartData = new ChartData
@@ -231,7 +232,16 @@ namespace Stock.Analysis.Tests.Service
             chartData.MaList.Add(5, _movingAvarageService.CalculateMovingAvarage(dataList, 5).Select(s => s.Price).ToList());
             chartData.MaList.Add(20, _movingAvarageService.CalculateMovingAvarage(dataList, 20).Select(s => s.Price).ToList());
             Stopwatch sw = new Stopwatch();
-            var result = _qtsService.GetFitness(testCase, dataList, chartData, periodStart, sw, sw);
+
+            var config = new MapperConfiguration(cfg =>
+            {
+                cfg.CreateMap<StockModel, StockModelDTO>();
+                cfg.AddProfile<StockModelDTO>();
+            });
+            var mapper = config.CreateMapper();
+            var stockListDto = mapper.Map<List<StockModel>, List<StockModelDTO>>(dataList);
+
+            var result = _qtsService.GetFitness(testCase, stockListDto, periodStart);
 
             Assert.Equal(1297974 + testCase.Funds, Math.Round(result));
         }

@@ -25,28 +25,6 @@ namespace Stock.Analysis._0607.Service
             return Math.Floor(diff.TotalSeconds);
         }
 
-        private static void ParseResult(List<StockModel> result, YahooFinanceChartDataModel data, string stockSymbol)
-        {
-            var timestamps = data?.chart?.result?.First()?.timestamp;
-            var closeStockValue = data?.chart?.result?.First()?.indicators?.quote?.First()?["close"];
-            var index = 0;
-            timestamps?.ForEach(timestamp =>
-            {
-                var price = closeStockValue.ElementAt(index) ?? 0;
-                if (closeStockValue.Any())
-                {
-                    result.Add(new StockModel
-                    {
-                        StockName = stockSymbol,
-                        Date = timestamp,
-                        //Price = Math.Round(price, 2, MidpointRounding.AwayFromZero)
-                        Price = price = Math.Round((double)closeStockValue.ElementAt(index), 6, MidpointRounding.AwayFromZero)
-                    });
-                }
-                index++;
-            });
-        }
-
         public List<StockModel> GetPeriodDataFromYahooApi(string stockSymbol, DateTime period1, DateTime period2)
         {
             var result = new List<StockModel>();
@@ -60,31 +38,26 @@ namespace Stock.Analysis._0607.Service
             return result;
         }
 
-        public List<StockModel> Get1YDataFromYahooApi(string stockSymbol)
+        private static void ParseResult(List<StockModel> result, YahooFinanceChartDataModel data, string stockSymbol)
         {
-            var result = new List<StockModel>();
-            var url = $"https://query1.finance.yahoo.com/v8/finance/chart/{stockSymbol}?range=1y&interval=1d";
-            var data = JsonConvert.DeserializeObject<YahooFinanceChartDataModel>(SendGetRequest(url));
-            ParseResult(result, data, stockSymbol);
-
-            return result;
-        }
-
-        
-
-        public List<StockModel> Get1dDataFromYahooApi(string stockSymbol)
-        {
-            var result = new List<StockModel>();
-            var url = $"https://query1.finance.yahoo.com/v8/finance/chart/{stockSymbol}";
-            var data = JsonConvert.DeserializeObject<YahooFinanceChartDataModel>(SendGetRequest(url));
-            ParseResult(result, data, stockSymbol);
-
-            return result;
-        }
-
-        public List<StockModel> GetMaForStockList(List<StockModel> stockList) {
-
-            return stockList;
+            var timestamps = data?.chart?.result?.First()?.timestamp;
+            var closeStockValue = data?.chart?.result?.First()?.indicators?.quote?.First()?["close"];
+            var index = 0;
+            timestamps?.ForEach(timestamp =>
+            {
+                if (closeStockValue != null && closeStockValue.Any())
+                {
+                    var price = closeStockValue?.ElementAt(index) ?? 0;
+                    result.Add(new StockModel
+                    {
+                        StockName = stockSymbol,
+                        Date = timestamp,
+                        //Price = Math.Round(price, 2, MidpointRounding.AwayFromZero)
+                        Price = price = Math.Round(price, 6, MidpointRounding.AwayFromZero)
+                    });
+                }
+                index++;
+            });
         }
 
         public string SendGetRequest(string url)
@@ -120,6 +93,7 @@ namespace Stock.Analysis._0607.Service
         {
             var stockModels = _stockModeldataProvider.GetAll(stockSymbol);
             var query = from stockModel in stockModels
+                        orderby stockModel.Date ascending
                         where stockModel.StockName == stockSymbol
                             && stockModel.Date > period1.Subtract(new DateTime(1970, 1, 1)).TotalSeconds && stockModel.Date < period2.Subtract(new DateTime(1970, 1, 1)).TotalSeconds
                             select stockModel;

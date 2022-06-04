@@ -13,8 +13,10 @@ namespace Stock.Analysis.Tests.MockData
         private readonly IMovingAvarageService _movingAvarageService = new MovingAvarageService();
 
         protected ChartData ascHistoryData;
+        protected List<StockModelDTO> ascStockListDto = new List<StockModelDTO>();
         protected List<StockModel> ascStockList = new List<StockModel>();
         protected ChartData concussiveHistoryData;
+        protected List<StockModelDTO> concussiveStockListDto = new List<StockModelDTO>();
         protected List<StockModel> concussiveStockList = new List<StockModel>();
         protected List<StockModel> realData1yOf2603 = new List<StockModel>();
         protected List<StockModel> realData120dOf2603 = new List<StockModel>();
@@ -128,6 +130,55 @@ namespace Stock.Analysis.Tests.MockData
             return concussiveHistoryData;
         }
 
+        public List<StockModelDTO> GetConcussiveStockListDTO()
+        {
+            if (concussiveStockListDto.Any()) return concussiveStockListDto;
+            DateTime _dateTime;
+            DateTime.TryParse("2020-05-08", out _dateTime);
+            concussiveHistoryData = new ChartData
+            {
+                Name = "AAPL",
+                Price = new List<double?>()
+            };
+            concussiveStockListDto = new List<StockModelDTO>();
+            var dayIndex = 0;
+            for (var i = 90; i > 0; i--)
+            {
+                var elapsedSpan = new TimeSpan(_dateTime.AddDays(dayIndex).Ticks);
+                concussiveStockListDto.Add(new StockModelDTO
+                {
+                    Date = elapsedSpan.TotalSeconds,
+                    Price = i + 10
+                });
+                concussiveHistoryData.Price.Add(i + 10);
+                dayIndex++;
+            }
+            for (var i = 0; i < 90; i++)
+            {
+                var elapsedSpan = new TimeSpan(_dateTime.AddDays(dayIndex).Ticks);
+                concussiveStockListDto.Add(new StockModelDTO
+                {
+                    Date = elapsedSpan.TotalSeconds,
+                    Price = i + 10
+                });
+                concussiveHistoryData.Price.Add(i + 10);
+                dayIndex++;
+            }
+            for (var i = 90; i > 0; i--)
+            {
+                var elapsedSpan = new TimeSpan(_dateTime.AddDays(dayIndex).Ticks);
+                concussiveStockListDto.Add(new StockModelDTO
+                {
+                    Date = elapsedSpan.TotalSeconds,
+                    Price = i + 10
+                });
+                concussiveHistoryData.Price.Add(i + 10);
+                dayIndex++;
+            }
+
+            return concussiveStockListDto;
+        }
+
         public List<StockModel> GetConcussiveStockList()
         {
             if (concussiveStockList.Any()) return concussiveStockList;
@@ -203,6 +254,7 @@ namespace Stock.Analysis.Tests.MockData
         ChartData GetAscHistoryData();
         List<StockModel> GetAscStockList();
         ChartData GetConcussiveHistoryData();
+        List<StockModelDTO> GetConcussiveStockListDTO();
         List<StockModel> GetConcussiveStockList();
         List<StockModel> GetRealData1yOf2603();
         List<StockModel> GetRealData120dOf2603();

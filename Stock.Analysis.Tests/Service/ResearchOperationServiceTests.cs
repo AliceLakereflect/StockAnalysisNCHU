@@ -7,6 +7,8 @@ using System.Linq;
 using Stock.Analysis.Tests.MockData;
 using System.Diagnostics;
 using Moq;
+using AutoMapper;
+using Stock.Analysis._0607.Interface;
 
 namespace Stock.Analysis.Tests.Service
 {
@@ -20,9 +22,11 @@ namespace Stock.Analysis.Tests.Service
         private readonly IRepository _historyRepository = new HistoryRepository();
         ChartData _historicalData;
         List<StockModel> _stockList = new List<StockModel>();
+        List<StockModelDTO> _stockListDto = new List<StockModelDTO>();
         TestCase _testCase = new TestCase { Funds = 100000, BuyShortTermMa = 5, BuyLongTermMa = 20, SellShortTermMa = 5, SellLongTermMa = 20 };
         DateTime _periodStart = new DateTime(2020, 1, 1, 0, 0, 0);
-        Stopwatch sw = new Stopwatch();
+        double _periodStartDouble = Utils.ConvertToUnixTimestamp(new DateTime(2020, 1, 1, 0, 0, 0));
+        double _periodStartUnixtime = Utils.ConvertToUnixTimestamp(new DateTime(2020, 1, 1, 0, 0, 0));
 
         public ResearchOperationServiceTests()
         {
@@ -37,8 +41,18 @@ namespace Stock.Analysis.Tests.Service
             var testCase = _testCase.DeepClone();
             testCase.Funds = 100;
 
-            
-            var transactionsList = _researchOperationService.GetMyTransactions(_historicalData, _stockList, testCase, _periodStart, sw, sw);
+            _stockList = _movingAvarageService.CalculateMovingAvarage(_stockList, 5);
+            _stockList = _movingAvarageService.CalculateMovingAvarage(_stockList, 20);
+
+            var config = new MapperConfiguration(cfg =>
+            {
+                cfg.CreateMap<StockModel, StockModelDTO>();
+                cfg.AddProfile<StockModelDTO>();
+            });
+            var mapper = config.CreateMapper();
+            var stockListDto = mapper.Map<List<StockModel>, List<StockModelDTO>>(_stockList);
+
+            var transactionsList = _researchOperationService.GetMyTransactions(stockListDto, testCase, _periodStartUnixtime);
             Assert.Single(transactionsList);
             Assert.All(transactionsList, trans=> {
                 Assert.Equal(TransactionType.AddFunds, trans.TransType);
@@ -48,11 +62,20 @@ namespace Stock.Analysis.Tests.Service
         [Fact]
         public void GetMyTransactionsTest1()
         {
-            var historicalData = _historyRepository.GetConcussiveHistoryData();
             var stockList = _historyRepository.GetConcussiveStockList();
+            stockList = _movingAvarageService.CalculateMovingAvarage(stockList, 5);
+            stockList = _movingAvarageService.CalculateMovingAvarage(stockList, 20);
+
+            var config = new MapperConfiguration(cfg =>
+            {
+                cfg.CreateMap<StockModel, StockModelDTO>();
+                cfg.AddProfile<StockModelDTO>();
+            });
+            var mapper = config.CreateMapper();
+            var stockListDto = mapper.Map<List<StockModel>, List<StockModelDTO>>(stockList);
             var testCase = _testCase.DeepClone();
             testCase.Funds = 18000;
-            var transactionsList = _researchOperationService.GetMyTransactions(historicalData, stockList, testCase, _periodStart, sw, sw);
+            var transactionsList = _researchOperationService.GetMyTransactions(stockListDto.OrderBy(s => s.Date).ToList(), testCase, _periodStartUnixtime);
             Assert.Equal(3, transactionsList.Count);
             Assert.Equal(18, transactionsList.Find(t=>t.TransType == TransactionType.Buy).TransPrice);
             Assert.Equal(1000, transactionsList.Find(t => t.TransType == TransactionType.Buy).TransVolume);
@@ -111,37 +134,17 @@ namespace Stock.Analysis.Tests.Service
             historicalData.MaList.Add(20, _movingAvarageService.CalculateMovingAvarage(stockList, 20).Select(s => s.Price).ToList());
             var testCase = _testCase.DeepClone();
             testCase.Funds = funds;
-            var transactionsList = _researchOperationService.GetMyTransactions(historicalData, stockList, testCase, _periodStart, sw, sw);
+            var config = new MapperConfiguration(cfg =>
+            {
+                cfg.CreateMap<StockModel, StockModelDTO>();
+                cfg.AddProfile<StockModelDTO>();
+            });
+            var mapper = config.CreateMapper();
+            var stockListDto = mapper.Map<List<StockModel>, List<StockModelDTO>>(stockList);
+            var transactionsList = _researchOperationService.GetMyTransactions(stockListDto, testCase, _periodStartUnixtime);
             Assert.Equal(3, transactionsList.Count);
             Assert.Equal(volumns, transactionsList.Find(t => t.TransType == TransactionType.Buy).TransVolume);
             Assert.Equal(volumns, transactionsList.Find(t => t.TransType == TransactionType.Sell).TransVolume);
-        }
-
-        [Fact]
-        public void GetMaFromYahooTest()
-        {
-            var symbol = "AAPL";
-            var chartdata = _researchOperationService.GetMaFromYahoo(symbol, _stockList, 1.0, 1.0);
-            Assert.Equal(symbol, chartdata.Name);
-
-            var index = 0;
-            var limit = 59;
-            var firstExpected = 39.5;
-            var ma60 = chartdata.MaList[60];
-            ma60.ForEach(maValue =>
-            {
-                if (index < limit)
-                {
-                    Assert.Null(maValue);
-                }
-                else
-                {
-                    var expected = firstExpected - limit + Convert.ToDouble(index);
-                    Assert.Equal(expected, maValue);
-                }
-
-                index++;
-            });
         }
 
         [Fact]
@@ -174,7 +177,14 @@ namespace Stock.Analysis.Tests.Service
             var testCase = new TestCase { BuyShortTermMa = 5, BuyLongTermMa = 20, SellShortTermMa = 5, SellLongTermMa = 20 };
             var periodEnd = new DateTime(2021, 7, 1, 0, 0, 0);
             var dataList = _historyRepository.GetRealData1yOf2603();
-            var transactions = _researchOperationService.ProfitSettlement(140, dataList, testCase, myTrans, Utils.ConvertToUnixTimestamp(periodEnd));
+            var config = new MapperConfiguration(cfg =>
+            {
+                cfg.CreateMap<StockModel, StockModelDTO>();
+                cfg.AddProfile<StockModelDTO>();
+            });
+            var mapper = config.CreateMapper();
+            var stockListDto = mapper.Map<List<StockModel>, List<StockModelDTO>>(dataList);
+            var transactions = _researchOperationService.ProfitSettlement(140, stockListDto, testCase, myTrans, Utils.ConvertToUnixTimestamp(periodEnd));
             var earn = _researchOperationService.GetEarningsResults(transactions);
             Assert.Equal(20 + funds, earn);
         }
@@ -216,7 +226,14 @@ namespace Stock.Analysis.Tests.Service
             };
             var periodEnd = new DateTime(2021, 7, 1, 0, 0, 0);
             var dataList = _historyRepository.GetRealData1yOf2603();
-            var transactions = _researchOperationService.ProfitSettlement(currentStock, dataList, _testCase, myTrans, Utils.ConvertToUnixTimestamp(periodEnd));
+            var config = new MapperConfiguration(cfg =>
+            {
+                cfg.CreateMap<StockModel, StockModelDTO>();
+                cfg.AddProfile<StockModelDTO>();
+            });
+            var mapper = config.CreateMapper();
+            var stockListDto = mapper.Map<List<StockModel>, List<StockModelDTO>>(dataList);
+            var transactions = _researchOperationService.ProfitSettlement(currentStock, stockListDto, _testCase, myTrans, Utils.ConvertToUnixTimestamp(periodEnd));
             var earn = _researchOperationService.GetEarningsResults(transactions);
             Assert.Equal(expectedEarned + funds, earn);
         }
@@ -231,18 +248,18 @@ namespace Stock.Analysis.Tests.Service
             };
             var periodEnd = new DateTime(2021, 6, 30, 0, 0, 0);
             var dataList = _historyRepository.GetRealData1yOf2603();
-            var chartData = new ChartData
+            dataList = _movingAvarageService.CalculateMovingAvarage(dataList, 5);
+            dataList = _movingAvarageService.CalculateMovingAvarage(dataList, 20);
+
+            var config = new MapperConfiguration(cfg =>
             {
-                Name = "2603.TW",
-                Price = new List<double?>()
-            };
+                cfg.CreateMap<StockModel, StockModelDTO>();
+                cfg.AddProfile<StockModelDTO>();
+            });
+            var mapper = config.CreateMapper();
+            var stockListDto = mapper.Map<List<StockModel>, List<StockModelDTO>>(dataList);
 
-            chartData.Price = dataList.Select(s => s.Price).ToList();
-            chartData.Timestamp = dataList.Select(s => s.Date).ToList();
-            chartData.MaList.Add(5, _movingAvarageService.CalculateMovingAvarage(dataList, 5).Select(s => s.Price).ToList());
-            chartData.MaList.Add(20, _movingAvarageService.CalculateMovingAvarage(dataList, 20).Select(s => s.Price).ToList());
-
-            var result = _researchOperationService.GetMyTransactions(chartData, dataList, testCase, _periodStart, sw, sw);
+            var result = _researchOperationService.GetMyTransactions(stockListDto.OrderBy(s => s.Date).ToList(), testCase, _periodStartDouble);
             Assert.Equal(15, result.Count);
             var expectedBuyTime = new List<string>{ "2020-4-10", "2020-7-7", "2020-7-21", "2020-8-3", "2020-10-8", "2021-2-17", "2021-5-25" };
             var index = 0;
@@ -261,7 +278,7 @@ namespace Stock.Analysis.Tests.Service
                 index++;
             });
 
-            var expectedBalance = new List<double> { 100000, 9, 110293, 9, 104902, 0, 103944, 7, 151444, 12, 309242, 8, 584772, 62, 1397974 };
+            var expectedBalance = new List<double> { 100000, 9, 110293, 9, 104902, 1, 103944, 7, 151444, 12, 309242, 8, 584772, 62, 1397974 };
             var expectedVolume = new List<int> { 0, 9803, 9803, 9803, 9803, 9580, 9580, 9406, 9406, 9095, 9095, 8426, 8426, 7096, 7096 };
             index = 0;
             Assert.All(result, trans => {
@@ -270,7 +287,7 @@ namespace Stock.Analysis.Tests.Service
                 index++;
             });
 
-            var transactions = _researchOperationService.ProfitSettlement(197, dataList, testCase, result, Utils.ConvertToUnixTimestamp(periodEnd));
+            var transactions = _researchOperationService.ProfitSettlement(197, stockListDto, testCase, result, Utils.ConvertToUnixTimestamp(periodEnd));
             var earn = _researchOperationService.GetEarningsResults(transactions);
             Assert.Equal(1297974 + testCase.Funds, Math.Round(earn));
             var lastTrans = result.LastOrDefault();
@@ -280,8 +297,8 @@ namespace Stock.Analysis.Tests.Service
         [Fact]
         public void DebugTransaction()
         {
-
-            IDataService _dataService = new DataService();
+            IDataProvider<StockModel> dataProvider = new Mock<IDataProvider<StockModel>>().Object;
+            IDataService _dataService = new DataService(dataProvider);
             var testCase = new TestCase
             {
                 Funds = 10000000,
@@ -298,8 +315,14 @@ namespace Stock.Analysis.Tests.Service
 
 
             var maStockList = _dataService.GetPeriodDataFromYahooApi("AAPL", new DateTime(2000, 1, 1, 0, 0, 0), periodEnd.AddDays(1));
-            ChartData chartData = _researchOperationService.GetMaFromYahoo("AAPL", maStockList, Utils.ConvertToUnixTimestamp(periodStart.AddDays(-2)), Utils.ConvertToUnixTimestamp(periodEnd.AddDays(1)));
-            var result = _researchOperationService.GetMyTransactions(chartData, dataList, testCase, periodStart, sw, sw);
+            var config = new MapperConfiguration(cfg =>
+            {
+                cfg.CreateMap<StockModel, StockModelDTO>();
+                cfg.AddProfile<StockModelDTO>();
+            });
+            var mapper = config.CreateMapper();
+            var stockListDto = mapper.Map<List<StockModel>, List<StockModelDTO>>(dataList);
+            var result = _researchOperationService.GetMyTransactions(stockListDto, testCase, Utils.ConvertToUnixTimestamp(periodStart));
             var fileService = new FileHandler();
             fileService.OutputTransaction(new List<StockTransList> {
                 new StockTransList { Transactions = result } },
