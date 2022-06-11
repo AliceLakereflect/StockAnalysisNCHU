@@ -6,12 +6,21 @@ using Stock.Analysis._0607.Repository;
 using Microsoft.EntityFrameworkCore;
 using Stock.Analysis._0607.Interface;
 using Stock.Analysis._0607.Models;
+using Microsoft.Extensions.Logging;
 
 namespace Stock.Analysis._0607
 {
     class Program
     {
-       
+
+        public static readonly ILoggerFactory MyLoggerFactory =
+           LoggerFactory.Create(
+                builder =>
+                {
+                    builder.AddConsole().AddFilter(level => level == LogLevel.Critical);
+                }
+           );
+
         static void Main(string[] args)
         {
             CreateHostBuilder(args).Build().Run();
@@ -19,7 +28,8 @@ namespace Stock.Analysis._0607
         }
         static IHostBuilder CreateHostBuilder(string[] args) =>
             Host.CreateDefaultBuilder(args)
-            .ConfigureServices((hostContext, services) => {
+            .ConfigureServices((hostContext, services) =>
+            {
                 services.AddHostedService<Worker>();
                 ConfigureServices(hostContext.Configuration, services);
             });
@@ -40,15 +50,19 @@ namespace Stock.Analysis._0607
 
             // DbContext
             var connectString = "Host=localhost;Database=StockResearch;Username=postgres;Password=13";
-            services.AddDbContext<StockModelDbContext>(options => options.UseNpgsql(connectString));
+            services.AddDbContextPool<StockModelDbContext>(options => {
+                options.UseNpgsql(connectString).UseLoggerFactory(MyLoggerFactory);
+                });
             services.AddScoped<IDataProvider<StockModel>, StockModelDataProvider>();
-            services.AddDbContext<TrainResultDbContext>(options => options.UseNpgsql(connectString));
+            services.AddDbContextPool<TrainResultDbContext>(options => options.UseNpgsql(connectString).UseLoggerFactory(MyLoggerFactory));
             services.AddScoped<IDataProvider<TrainResult>, TrainResultProvider>();
-            services.AddDbContext<TrainBestTransactionDbContext>(options => options.UseNpgsql(connectString));
+            services.AddDbContextPool<TrainBestTransactionDbContext>(options => options.UseNpgsql(connectString).UseLoggerFactory(MyLoggerFactory));
             services.AddScoped<IDataProvider<TrainBestTransaction>, TrainBestTransactionProvider>();
 
             // automapper
             services.AddAutoMapper(typeof(StockModelDTO));
+
+            services.AddLogging();
 
         }
     }

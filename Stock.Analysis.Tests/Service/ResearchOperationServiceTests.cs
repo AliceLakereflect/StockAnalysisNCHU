@@ -9,6 +9,8 @@ using System.Diagnostics;
 using Moq;
 using AutoMapper;
 using Stock.Analysis._0607.Interface;
+using Microsoft.EntityFrameworkCore;
+using Stock.Analysis._0607.Repository;
 
 namespace Stock.Analysis.Tests.Service
 {
@@ -297,24 +299,25 @@ namespace Stock.Analysis.Tests.Service
         [Fact]
         public void DebugTransaction()
         {
-            IDataProvider<StockModel> dataProvider = new Mock<IDataProvider<StockModel>>().Object;
-            IDataService _dataService = new DataService(dataProvider);
+            var connectString = "Host=localhost;Database=StockResearch;Username=postgres;Password=13";
+            var options = new DbContextOptionsBuilder<StockModelDbContext>();
+            options.UseNpgsql(connectString);
+            var _stockModeldataProvider = new StockModelDataProvider(new StockModelDbContext(options.Options));
+            var _dataService = new DataService(_stockModeldataProvider);
             var testCase = new TestCase
             {
                 Funds = 10000000,
-                BuyShortTermMa = 12,
-                BuyLongTermMa = 4,
-                SellShortTermMa = 127,
-                SellLongTermMa = 126
+                BuyShortTermMa = 76,
+                BuyLongTermMa = 111,
+                SellShortTermMa = 134,
+                SellLongTermMa = 32
             };
 
-            var periodStart = new DateTime(2012, 9, 1, 0, 0, 0);
-            var periodEnd = new DateTime(2012, 9, 30, 0, 0, 0);
-            //var dataList = _historyRepository.GetRealData1yOf2603();
-            var dataList = _dataService.GetPeriodDataFromYahooApi("AAPL", periodStart.AddDays(-2), periodEnd.AddDays(1));
+            var periodStart = new DateTime(2012, 8, 1, 0, 0, 0);
+            var periodEnd = new DateTime(2012, 8, 31, 0, 0, 0);
+            var dataList = _dataService.GetStockDataFromDb("AAPL", periodStart.AddDays(-2), periodEnd.AddDays(1));
+            var dataListLong = _dataService.GetStockDataFromDb("AAPL", periodStart.AddDays(-7), periodEnd.AddDays(1));
 
-
-            var maStockList = _dataService.GetPeriodDataFromYahooApi("AAPL", new DateTime(2000, 1, 1, 0, 0, 0), periodEnd.AddDays(1));
             var config = new MapperConfiguration(cfg =>
             {
                 cfg.CreateMap<StockModel, StockModelDTO>();

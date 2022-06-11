@@ -38,7 +38,7 @@ namespace Stock.Analysis._0607.Service
             DELTA = delda;
         }
 
-        public StatusValue Fit(Queue<int> cRandom, Random random, double funds, List<StockModelDTO> stockList, int experiment, double periodStartTimeStamp)
+        public StatusValue Fit(Queue<int> cRandom, Random random, double funds, List<StockModelDTO> stockList, int experiment, double periodStartTimeStamp, CsvWriter csv)
         {
             var iteration = 0;
             
@@ -76,7 +76,7 @@ namespace Stock.Analysis._0607.Service
                 //index++;
 
                 //#endregion
-                
+
             });
             bool hasAnyTransaction = particles.FindAll(p => p.CurrentFitness.Fitness - funds != 0).Any();
 
@@ -108,7 +108,7 @@ namespace Stock.Analysis._0607.Service
             {
                 UpdateProbability(p, gBest, localWorst);
             });
-            
+
             //#region debug
 
             //csv.WriteField("beta matrix");
@@ -127,7 +127,7 @@ namespace Stock.Analysis._0607.Service
                 //#endregion
                 MetureX(cRandom, random, particles, funds);
                 //index = 0;
-                
+
                 particles.ForEach((p) =>
                 {
                     p.CurrentFitness.Fitness = GetFitness(p.TestCase, stockList, periodStartTimeStamp);
@@ -435,7 +435,7 @@ namespace Stock.Analysis._0607.Service
 
     public interface IGNQTSAlgorithmService : IAlgorithmService
     {
-        StatusValue Fit(Queue<int> cRandom, Random random, double funds, List<StockModelDTO> stockList, int experiment, double periodStartTimeStamp);
+        StatusValue Fit(Queue<int> cRandom, Random random, double funds, List<StockModelDTO> stockList, int experiment, double periodStartTimeStamp, CsvWriter csv);
         double GetFitness(TestCase currentTestCase, List<StockModelDTO> stockList, double periodStartTimeStamp);
         public void UpdateProByGN(Particle p, StatusValue gbest, StatusValue localWorst);
         public void SetDelta(double delta);

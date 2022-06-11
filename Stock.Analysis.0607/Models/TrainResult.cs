@@ -5,6 +5,7 @@ namespace Stock.Analysis._0607.Models
     {
         public Guid Id { get; set; }
         public string FileName { get; set; }
+        public double Timestamp { get; set; }
         public string StockName { get; set; }
         public string AlgorithmName { get; set; }
         public double Delta { get; set; }

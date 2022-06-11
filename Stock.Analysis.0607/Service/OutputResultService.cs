@@ -24,13 +24,14 @@ namespace Stock.Analysis._0607.Service
             _trainBestTransactionProvider = trainBestTransactionProvider ?? throw new ArgumentNullException(nameof(trainBestTransactionProvider));
         }
 
-        public void OutputQTSResult(double funds, int experimentNumber, string filename, string stockSymbol, double periodStartTimeStamp, List<StockModelDTO> stockList, StatusValue bestGbest, int gBestCount = 0)
+        public TrainResult OutputQTSResult(double funds, int experimentNumber, string filename, string stockSymbol, double periodStartTimeStamp, List<StockModelDTO> stockList, StatusValue bestGbest, int gBestCount = 0)
         {
             var algorithmConst = _qtsAlgorithmService.GetConst();
 
             var trainResult = new TrainResult {
-                Id = new Guid(),
+                Id = Guid.NewGuid(),
                 FileName = filename,
+                Timestamp = periodStartTimeStamp,
                 StockName = stockSymbol,
                 AlgorithmName = algorithmConst.Name,
                 Delta = algorithmConst.DELTA,
@@ -50,11 +51,14 @@ namespace Stock.Analysis._0607.Service
                 BestCount = gBestCount
             };
 
-            _trainResultProvider.Add(trainResult);
+            return trainResult;
+        }
 
-            if (bestGbest.Fitness == funds) return;
-
+        public List<TrainBestTransaction> OutputQTSBestTransaction(double funds, string stockSymbol, double periodStartTimeStamp, List<StockModelDTO> stockList, StatusValue bestGbest, Guid trainResultId)
+        {
             var trainBestTrainsactions = new List<TrainBestTransaction>();
+            if (bestGbest.Fitness == funds) return trainBestTrainsactions;
+
             var testCase = new TestCase
             {
                 Funds = funds,
@@ -66,11 +70,11 @@ namespace Stock.Analysis._0607.Service
             var transactions = _researchOperationService.GetMyTransactions(stockList, testCase, periodStartTimeStamp);
             foreach (var transaction in transactions)
             {
-                
+
                 if (transaction.TransType == TransactionType.AddFunds) continue;
                 var trainBestTrainsaction = new TrainBestTransaction
                 {
-                    TrainResultId = trainResult.Id,
+                    TrainResultId = trainResultId,
                     StockName = stockSymbol,
                     TransType = transaction.TransType,
                     Date = transaction.TransTime,
@@ -101,7 +105,7 @@ namespace Stock.Analysis._0607.Service
                 trainBestTrainsactions.Add(trainBestTrainsaction);
             }
 
-            _trainBestTransactionProvider.AddBatch(trainBestTrainsactions);
+            return trainBestTrainsactions;
         }
 
         public void PrintTransactions(
@@ -128,11 +132,19 @@ namespace Stock.Analysis._0607.Service
             transString += "=========================================================================================================\n";
             Console.WriteLine(transString);
         }
+
+        public void UpdateResultsInDb(List<TrainResult> trainResults, List<TrainBestTransaction> trainBestTransactions)
+        {
+            _trainResultProvider.AddBatch(trainResults);
+            _trainBestTransactionProvider.AddBatch(trainBestTransactions);
+        }
     }
 
     public interface IOutputResultService
     {
-        void OutputQTSResult(double funds, int experimentNumber, string filename, string stockSymbol, double periodStartTimeStamp, List<StockModelDTO> stockList, StatusValue bestGbest, int gBestCount = 0);
+        TrainResult OutputQTSResult(double funds, int experimentNumber, string filename, string stockSymbol, double periodStartTimeStamp, List<StockModelDTO> stockList, StatusValue bestGbest, int gBestCount = 0);
+        List<TrainBestTransaction> OutputQTSBestTransaction(double funds, string stockSymbol, double periodStartTimeStamp, List<StockModelDTO> stockList, StatusValue bestGbest, Guid trainResultId);
         void PrintTransactions(string symbol, TestCase currentTestCase, List<StockTransaction> myTrans, TestCase ma, double? currentStock);
+        void UpdateResultsInDb(List<TrainResult> trainResults, List<TrainBestTransaction> trainBestTransactions);
     }
 }

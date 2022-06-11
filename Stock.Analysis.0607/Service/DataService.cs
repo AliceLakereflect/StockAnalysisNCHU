@@ -95,7 +95,7 @@ namespace Stock.Analysis._0607.Service
             var query = from stockModel in stockModels
                         orderby stockModel.Date ascending
                         where stockModel.StockName == stockSymbol
-                            && stockModel.Date > period1.Subtract(new DateTime(1970, 1, 1)).TotalSeconds && stockModel.Date < period2.Subtract(new DateTime(1970, 1, 1)).TotalSeconds
+                            && stockModel.Date >= period1.Subtract(new DateTime(1970, 1, 1)).TotalSeconds && stockModel.Date <= period2.Subtract(new DateTime(1970, 1, 1)).TotalSeconds
                             select stockModel;
 
             return query.ToList();
